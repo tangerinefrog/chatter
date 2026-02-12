@@ -23,7 +23,8 @@ func NewServer(addr string, logger *zap.Logger, usersRepo *users.UsersRepository
 
 	e.Validator = validator.New()
 
-		e.Use(middleware.Recover())
+	e.Use(middleware.Recover())
+	e.Use(middleware.RequestLogger())
 	e.Use(middleware.CORS("*"))
 
 	s := Server{
