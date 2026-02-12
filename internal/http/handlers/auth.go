@@ -57,5 +57,37 @@ func (h *userHandler) SignUp(c *echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	return c.NoContent(http.StatusCreated)
+	return c.NoContent(http.StatusOK)
+}
+
+func (h *userHandler) Login(c *echo.Context) error {
+	var req dto.LogInDTO
+
+	err := c.Bind(&req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	err = c.Validate(&req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	u, err := h.usersRepo.GetByUsername(c.Request().Context(), req.Username)
+	if err != nil || u == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid username or password")
+	}
+
+	hasher := auth.NewHasher()
+	isValid, err := hasher.Verify(req.Password, u.PasswordHash)
+	if err != nil {
+		h.logger.Error("Hash verify failed", zap.Error(err))
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid username or password")
+	}
+
+	if !isValid {
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid username or password")
+	}
+
+	return c.NoContent(http.StatusOK)
 }

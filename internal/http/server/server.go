@@ -52,6 +52,7 @@ func (s *Server) registerRoutes() {
 	authHandler := handlers.NewUserHandler(s.usersRepo, s.logger)
 	auth := api.Group("/auth")
 	auth.POST("/signup", authHandler.SignUp)
+	auth.GET("/login", authHandler.Login)
 
 	s.echo.GET("/health", func(c *echo.Context) error {
 		return c.NoContent(http.StatusOK)
