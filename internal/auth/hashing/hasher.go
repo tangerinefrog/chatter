@@ -1,4 +1,4 @@
-package auth
+package hashing
 
 import (
 	"crypto/rand"

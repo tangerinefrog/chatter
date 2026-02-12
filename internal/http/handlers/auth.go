@@ -4,26 +4,29 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v5"
-	"github.com/tangerinefrog/chatter/internal/auth"
+	"github.com/tangerinefrog/chatter/internal/auth/hashing"
+	"github.com/tangerinefrog/chatter/internal/auth/jwt"
 	"github.com/tangerinefrog/chatter/internal/http/dto"
 	"github.com/tangerinefrog/chatter/internal/users"
 	"go.uber.org/zap"
 )
 
 type userHandler struct {
-	usersRepo *users.UsersRepository
-	logger    *zap.Logger
+	usersRepo  *users.UsersRepository
+	logger     *zap.Logger
+	jwtManager *jwt.JwtManager
 }
 
-func NewUserHandler(usersRepo *users.UsersRepository, logger *zap.Logger) *userHandler {
+func NewUserHandler(usersRepo *users.UsersRepository, logger *zap.Logger, jwtManager *jwt.JwtManager) *userHandler {
 	return &userHandler{
-		usersRepo: usersRepo,
-		logger:    logger,
+		usersRepo:  usersRepo,
+		logger:     logger,
+		jwtManager: jwtManager,
 	}
 }
 
 func (h *userHandler) SignUp(c *echo.Context) error {
-	var req dto.SignUpDTO
+	var req dto.SignUpRequest
 
 	err := c.Bind(&req)
 	if err != nil {
@@ -45,7 +48,7 @@ func (h *userHandler) SignUp(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "username already taken")
 	}
 
-	hasher := auth.NewHasher()
+	hasher := hashing.NewHasher()
 	passwordHash, err := hasher.Hash(req.Password)
 	if err != nil {
 		h.logger.Error("Hashing failed", zap.Error(err))
@@ -61,7 +64,7 @@ func (h *userHandler) SignUp(c *echo.Context) error {
 }
 
 func (h *userHandler) Login(c *echo.Context) error {
-	var req dto.LogInDTO
+	var req dto.LogInRequest
 
 	err := c.Bind(&req)
 	if err != nil {
@@ -78,7 +81,7 @@ func (h *userHandler) Login(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid username or password")
 	}
 
-	hasher := auth.NewHasher()
+	hasher := hashing.NewHasher()
 	isValid, err := hasher.Verify(req.Password, u.PasswordHash)
 	if err != nil {
 		h.logger.Error("Hash verify failed", zap.Error(err))
@@ -89,5 +92,16 @@ func (h *userHandler) Login(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid username or password")
 	}
 
-	return c.NoContent(http.StatusOK)
+	token, expires, err := h.jwtManager.Generate(u.ID)
+	if err != nil {
+		h.logger.Error("Generating JWT for user failed", zap.Int32("user_id", u.ID), zap.Error(err))
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	resp := dto.LogInResponse{
+		Token:     token,
+		ExpiresAt: expires,
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }

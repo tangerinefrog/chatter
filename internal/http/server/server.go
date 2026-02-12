@@ -2,9 +2,12 @@ package server
 
 import (
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+	"github.com/tangerinefrog/chatter/internal/auth/jwt"
 	"github.com/tangerinefrog/chatter/internal/http/handlers"
 	"github.com/tangerinefrog/chatter/internal/http/validator"
 	"github.com/tangerinefrog/chatter/internal/users"
@@ -12,10 +15,11 @@ import (
 )
 
 type Server struct {
-	addr      string
-	echo      *echo.Echo
-	logger    *zap.Logger
-	usersRepo *users.UsersRepository
+	addr       string
+	echo       *echo.Echo
+	logger     *zap.Logger
+	usersRepo  *users.UsersRepository
+	jwtManager *jwt.JwtManager
 }
 
 func NewServer(addr string, logger *zap.Logger, usersRepo *users.UsersRepository) *Server {
@@ -27,11 +31,19 @@ func NewServer(addr string, logger *zap.Logger, usersRepo *users.UsersRepository
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.CORS("*"))
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		logger.Fatal("JWT secret is not defined in the .env file")
+	}
+
+	jwtManager := jwt.NewJwtManager(jwtSecret, 1*time.Hour)
+
 	s := Server{
-		addr:      addr,
-		echo:      e,
-		logger:    logger,
-		usersRepo: usersRepo,
+		addr:       addr,
+		echo:       e,
+		logger:     logger,
+		usersRepo:  usersRepo,
+		jwtManager: jwtManager,
 	}
 
 	s.registerRoutes()
@@ -49,7 +61,7 @@ func (s *Server) Start() {
 func (s *Server) registerRoutes() {
 	api := s.echo.Group("/api")
 
-	authHandler := handlers.NewUserHandler(s.usersRepo, s.logger)
+	authHandler := handlers.NewUserHandler(s.usersRepo, s.logger, s.jwtManager)
 	auth := api.Group("/auth")
 	auth.POST("/signup", authHandler.SignUp)
 	auth.GET("/login", authHandler.Login)
