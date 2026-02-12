@@ -12,8 +12,8 @@ type UsersRepository struct {
 	q *db.Queries
 }
 
-func NewRepository(q *db.Queries) UsersRepository {
-	return UsersRepository{q: q}
+func NewRepository(q *db.Queries) *UsersRepository {
+	return &UsersRepository{q: q}
 }
 
 func (r *UsersRepository) Create(ctx context.Context, username, passwordHash string) (*db.User, error) {
