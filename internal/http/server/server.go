@@ -2,13 +2,12 @@ package server
 
 import (
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 	"github.com/tangerinefrog/chatter/internal/auth/jwt"
 	"github.com/tangerinefrog/chatter/internal/http/handlers"
+	mw "github.com/tangerinefrog/chatter/internal/http/middleware"
 	"github.com/tangerinefrog/chatter/internal/http/validator"
 	"github.com/tangerinefrog/chatter/internal/users"
 	"go.uber.org/zap"
@@ -22,7 +21,7 @@ type Server struct {
 	jwtManager *jwt.JwtManager
 }
 
-func NewServer(addr string, logger *zap.Logger, usersRepo *users.UsersRepository) *Server {
+func NewServer(addr string, logger *zap.Logger, usersRepo *users.UsersRepository, jwtManager *jwt.JwtManager) *Server {
 	e := echo.New()
 
 	e.Validator = validator.New()
@@ -30,13 +29,6 @@ func NewServer(addr string, logger *zap.Logger, usersRepo *users.UsersRepository
 	e.Use(middleware.Recover())
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.CORS("*"))
-
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		logger.Fatal("JWT secret is not defined in the .env file")
-	}
-
-	jwtManager := jwt.NewJwtManager(jwtSecret, 1*time.Hour)
 
 	s := Server{
 		addr:       addr,
@@ -65,6 +57,10 @@ func (s *Server) registerRoutes() {
 	auth := api.Group("/auth")
 	auth.POST("/signup", authHandler.SignUp)
 	auth.GET("/login", authHandler.Login)
+
+	chat := api.Group("/chat")
+	chat.Use(mw.Auth(s.jwtManager))
+	chat.GET("/test", func(c *echo.Context) error { return c.NoContent(http.StatusOK) })
 
 	s.echo.GET("/health", func(c *echo.Context) error {
 		return c.NoContent(http.StatusOK)

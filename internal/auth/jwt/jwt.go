@@ -48,7 +48,9 @@ func (m *JwtManager) Generate(userId int32) (string, time.Time, error) {
 }
 
 func (m *JwtManager) GetClaims(tokenStr string) (*Claims, error) {
-	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
+	claims := &Claims{}
+
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (any, error) {
 		return m.secret, nil
 	})
 
@@ -56,9 +58,7 @@ func (m *JwtManager) GetClaims(tokenStr string) (*Claims, error) {
 		return nil, err
 	}
 
-	claims, ok := token.Claims.(*Claims)
-
-	if !ok || !token.Valid {
+	if !token.Valid {
 		return nil, jwt.ErrTokenInvalidClaims
 	}
 
