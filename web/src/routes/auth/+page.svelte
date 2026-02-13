@@ -44,12 +44,14 @@
         <h2>{mode === 'login' ? 'Login' : 'Create Account'}</h2>
 
         <input
+            class="input"
             type="text"
             placeholder="Username"
             bind:value={username}
         />
 
         <input
+            class="input"
             type="password"
             placeholder="Password"
             bind:value={password}
@@ -59,7 +61,9 @@
             <div class="error">{error}</div>
         {/if}
 
-        <button on:click={submit}>
+        <button 
+            class="button"
+            on:click={submit}>
             {mode === 'login' ? 'Login' : 'Sign Up'}
         </button>
 
@@ -67,7 +71,8 @@
             {mode === 'login'
                 ? "Don't have an account?"
                 : "Already have an account?"}
-            <button on:click={toggleMode}>
+            <button 
+                on:click={toggleMode}>
                 {mode === 'login' ? 'Sign up' : 'Login'}
             </button>
         </p>

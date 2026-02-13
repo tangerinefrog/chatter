@@ -1,3 +1,17 @@
+:root {
+  --bg-main: #0f172a;
+  --bg-surface: #111827;
+  --bg-elevated: #1e293b;
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+
+  --text-main: #e2e8f0;
+  --text-danger: #f87171;
+
+  --radius: 12px;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -6,4 +20,46 @@ body {
   color: #333;
   background-color: #fff;
   min-height: 100vh;
+  margin: 0;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-family: system-ui, sans-serif;
+}
+
+.card {
+    background: var(--bg-elevated);
+    padding: 2rem;
+    border-radius: var(--radius);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.input {
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: none;
+    background: #334155;
+    color: white;
+}
+
+.input:focus {
+    outline: 2px solid var(--primary);
+}
+
+.button {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.button:hover {
+    background: var(--primary-hover);
+}
+
+.button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
