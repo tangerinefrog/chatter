@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 	"github.com/tangerinefrog/chatter/internal/auth/jwt"
+	"github.com/tangerinefrog/chatter/internal/chats"
 	"github.com/tangerinefrog/chatter/internal/http/handlers"
 	mw "github.com/tangerinefrog/chatter/internal/http/middleware"
 	"github.com/tangerinefrog/chatter/internal/http/validator"
@@ -21,7 +22,13 @@ type Server struct {
 	jwtManager *jwt.JwtManager
 }
 
-func NewServer(addr string, logger *zap.Logger, usersRepo *users.UsersRepository, jwtManager *jwt.JwtManager) *Server {
+func NewServer(
+	addr string, 
+	logger *zap.Logger, 
+	usersRepo *users.UsersRepository, 
+	chatsRepo *chats.ChatRepository, 
+	jwtManager *jwt.JwtManager,
+) *Server {
 	e := echo.New()
 
 	e.Validator = validator.New()

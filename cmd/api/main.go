@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/tangerinefrog/chatter/internal/auth/jwt"
-	"github.com/tangerinefrog/chatter/internal/db"
+	"github.com/tangerinefrog/chatter/internal/chats"
 	"github.com/tangerinefrog/chatter/internal/http/server"
 	"github.com/tangerinefrog/chatter/internal/users"
 	"go.uber.org/zap"
@@ -48,10 +48,9 @@ func main() {
 	}
 	defer pool.Close()
 
-	queries := db.New(pool)
+	usersRepo := users.NewRepository(pool)
+	chatsRepo := chats.NewRepository(pool)
 
-	usersRepo := users.NewRepository(queries)
-
-	srv := server.NewServer(addr, logger, usersRepo, jwtManager)
+	srv := server.NewServer(addr, logger, usersRepo, chatsRepo, jwtManager)
 	srv.Start()
 }
