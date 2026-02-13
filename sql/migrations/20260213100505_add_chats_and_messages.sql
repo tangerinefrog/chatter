@@ -7,7 +7,7 @@ CREATE TABLE chats (
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
-CREATE TABLE chat_users (
+CREATE TABLE chats_users (
     chat_id INT REFERENCES chats(id) ON DELETE CASCADE,
     user_id INT REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP NOT NULL DEFAULT now(),
@@ -24,5 +24,5 @@ CREATE TABLE messages (
 
 -- +goose Down
 DROP TABLE messages;
-DROP TABLE chat_users;
+DROP TABLE chats_users;
 DROP TABLE chats;

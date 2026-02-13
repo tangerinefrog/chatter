@@ -16,7 +16,7 @@ type Chat struct {
 	CreatedAt pgtype.Timestamp
 }
 
-type ChatUser struct {
+type ChatsUser struct {
 	ChatID    int32
 	UserID    int32
 	CreatedAt pgtype.Timestamp
