@@ -8,6 +8,28 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Chat struct {
+	ID        int32
+	Type      string
+	Name      pgtype.Text
+	CreatedBy pgtype.Int4
+	CreatedAt pgtype.Timestamp
+}
+
+type ChatUser struct {
+	ChatID    int32
+	UserID    int32
+	CreatedAt pgtype.Timestamp
+}
+
+type Message struct {
+	ID        int64
+	ChatID    pgtype.Int4
+	UserID    pgtype.Int4
+	Content   string
+	CreatedAt pgtype.Timestamp
+}
+
 type User struct {
 	ID           int32
 	Username     string
