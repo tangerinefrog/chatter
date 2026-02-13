@@ -39,3 +39,15 @@ FROM chats c
 INNER JOIN chats_users cu ON cu.chat_id = c.id
 WHERE 
     cu.user_id = $1;
+
+-- name: GetDirectChatBetweenUsers :one
+SELECT 
+    c.id
+FROM chats c
+JOIN chats_users cu1 ON cu1.chat_id = c.id
+JOIN chats_users cu2 ON cu2.chat_id = c.id
+WHERE 
+    c.type = 'direct'
+    AND cu1.user_id = $1
+    AND cu2.user_id = $2
+LIMIT 1;

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/labstack/echo/v5"
 	"github.com/tangerinefrog/chatter/internal/auth/jwt"
@@ -11,17 +10,12 @@ import (
 func Auth(jwtManager *jwt.JwtManager) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
-			authHeader := c.Request().Header.Get("Authorization")
-			if authHeader == "" {
-				return echo.NewHTTPError(http.StatusUnauthorized, "missing auth token")
+			cookie, err := c.Request().Cookie("auth_token")
+			if err != nil {
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid auth token")
 			}
 
-			parts := strings.Split(authHeader, " ")
-			if len(parts) != 2 || parts[0] != "Bearer" {
-				return echo.NewHTTPError(http.StatusUnauthorized, "invalid auth header")
-			}
-
-			claims, err := jwtManager.GetClaims(parts[1])
+			claims, err := jwtManager.GetClaims(cookie.Value)
 			if err != nil {
 				return echo.NewHTTPError(http.StatusUnauthorized, "invalid auth token")
 			}

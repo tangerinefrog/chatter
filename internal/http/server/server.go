@@ -19,14 +19,15 @@ type Server struct {
 	echo       *echo.Echo
 	logger     *zap.Logger
 	usersRepo  *users.UsersRepository
+	chatsRepo  *chats.ChatsRepository
 	jwtManager *jwt.JwtManager
 }
 
 func NewServer(
-	addr string, 
-	logger *zap.Logger, 
-	usersRepo *users.UsersRepository, 
-	chatsRepo *chats.ChatRepository, 
+	addr string,
+	logger *zap.Logger,
+	usersRepo *users.UsersRepository,
+	chatsRepo *chats.ChatsRepository,
 	jwtManager *jwt.JwtManager,
 ) *Server {
 	e := echo.New()
@@ -42,6 +43,7 @@ func NewServer(
 		echo:       e,
 		logger:     logger,
 		usersRepo:  usersRepo,
+		chatsRepo:  chatsRepo,
 		jwtManager: jwtManager,
 	}
 
@@ -65,9 +67,10 @@ func (s *Server) registerRoutes() {
 	auth.POST("/signup", authHandler.SignUp)
 	auth.POST("/login", authHandler.Login)
 
-	chat := api.Group("/chat")
-	chat.Use(mw.Auth(s.jwtManager))
-	chat.GET("/test", func(c *echo.Context) error { return c.NoContent(http.StatusOK) })
+	chatsHandler := handlers.NewChatsHandler(s.usersRepo, s.chatsRepo, s.logger)
+	chats := api.Group("/chats")
+	chats.Use(mw.Auth(s.jwtManager))
+	chats.POST("", chatsHandler.CreateChat)
 
 	s.echo.GET("/health", func(c *echo.Context) error {
 		return c.NoContent(http.StatusOK)

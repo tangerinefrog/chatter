@@ -57,6 +57,31 @@ func (q *Queries) CreateChatUser(ctx context.Context, arg CreateChatUserParams) 
 	return err
 }
 
+const getDirectChatBetweenUsers = `-- name: GetDirectChatBetweenUsers :one
+SELECT 
+    c.id
+FROM chats c
+JOIN chats_users cu1 ON cu1.chat_id = c.id
+JOIN chats_users cu2 ON cu2.chat_id = c.id
+WHERE 
+    c.type = 'direct'
+    AND cu1.user_id = $1
+    AND cu2.user_id = $2
+LIMIT 1
+`
+
+type GetDirectChatBetweenUsersParams struct {
+	UserID   int32
+	UserID_2 int32
+}
+
+func (q *Queries) GetDirectChatBetweenUsers(ctx context.Context, arg GetDirectChatBetweenUsersParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getDirectChatBetweenUsers, arg.UserID, arg.UserID_2)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
 const listUserChats = `-- name: ListUserChats :many
 SELECT
     c.id,
