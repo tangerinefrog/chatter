@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/tangerinefrog/chatter/internal/auth/hashing"
@@ -98,10 +99,19 @@ func (h *userHandler) Login(c *echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	resp := dto.LogInResponse{
-		Token:     token,
-		ExpiresAt: expires,
-	}
+	setJwtCookie(c, token, expires)
 
-	return c.JSON(http.StatusOK, resp)
+	return c.NoContent(http.StatusOK)
+}
+
+func setJwtCookie(c *echo.Context, token string, expires time.Time) {
+	c.SetCookie(&http.Cookie{
+		Name:     "auth_token",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  expires,
+	})
 }

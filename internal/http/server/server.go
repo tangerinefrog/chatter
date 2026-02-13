@@ -56,7 +56,7 @@ func (s *Server) registerRoutes() {
 	authHandler := handlers.NewUserHandler(s.usersRepo, s.logger, s.jwtManager)
 	auth := api.Group("/auth")
 	auth.POST("/signup", authHandler.SignUp)
-	auth.GET("/login", authHandler.Login)
+	auth.POST("/login", authHandler.Login)
 
 	chat := api.Group("/chat")
 	chat.Use(mw.Auth(s.jwtManager))
