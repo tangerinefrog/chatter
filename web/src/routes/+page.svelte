@@ -1,42 +1,29 @@
 <script lang="ts">
-    import '$lib/css/main.css';
     import type { Chat } from '$lib/models/chat';
     import type { Message } from '$lib/models/message';
-
-    let chats: Chat[] = [
-        { 
-            id: "dfgkj1kfdsj",
-            type: 'direct',
-            name: 'someone',
-            createdAt: new Date().toISOString(),
-            lastMessage: 'yo my guy'
-        },{ 
-            id: "fdsqweqwe",
-            type: 'direct',
-            name: 'someone',
-            createdAt: new Date().toISOString(),
-            lastMessage: 'yo my guy'
-        },
-    ];
-
-    let currentChat = chats[0];
+    import { onMount } from 'svelte';
+    import { getChats } from '$lib/api/chats';
+    
+    import '$lib/css/main.css';
+    
+    let chats: Chat[] = [];
+    let messages: Message[] = [];
+    let currentChat: Chat | null = null;
     let currentMessage = '';
-
-    let messages: Message[] = [
-        { id: 'qfrjh52we', fromMe: false, text: 'Hey there!' },
-        { id: 'qgsjhq2we', fromMe: true, text: 'Hi! What\'s up?' },
-        { id: 'qfs1hq2ge', fromMe: false, text: 'Just testing this chat UI.' },
-        { id: 'qfsjghq2we', fromMe: true, text: 'Looks decent so far.' }
-    ];
+    let isNewChatModalOpen = false;
+    let username = '';
 
     function selectChat(chat: Chat) {
-        if (currentChat.id === chat.id) {
+        if (currentChat?.id === chat.id) {
             return;
         }
 
         currentChat = chat;   
         messages = [];
+    }
 
+    async function refreshChats() {
+        chats = await getChats();
     }
 
     function sendMessage() {
@@ -44,22 +31,60 @@
 
         messages = [
             ...messages,
-            { id: "qweasd", fromMe: true, text: currentMessage }
+            { id: 2, fromMe: true, text: currentMessage }
         ];
 
         currentMessage = '';
+    }    
+
+    function openModal() {
+        isNewChatModalOpen = true;
     }
+
+    function closeModal() {
+        isNewChatModalOpen = false;
+        username = '';
+    }
+
+    function addChat() {
+        if (!username.trim()) return;
+
+        console.log('Creating chat with:', username);
+
+        closeModal();
+    }
+
+    function handleKeydown(event: KeyboardEvent) {
+        if (event.key === 'Escape') {
+            if (isNewChatModalOpen) {
+                closeModal();
+            } else {
+                currentChat = null;
+            }
+        }
+    }
+
+    onMount(() => {
+        refreshChats();
+    });
+    
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div class="app">
     <aside class="sidebar">
         <div class="sidebar-header">
             Chats
+
+            <button class="button" on:click={openModal}>
+                + Add new
+            </button>
         </div>
 
         <div class="contacts">
             {#each chats as chat}
-                <div role="button" tabindex="0" class="contact {chat.id === currentChat.id ? 'active' : ''}"
+                <div role="button" tabindex="0" class="contact {chat.id === currentChat?.id ? 'active' : ''}"
                     on:click={() => selectChat(chat)}
                     on:keydown={() => selectChat(chat)}                    
                 >
@@ -99,8 +124,27 @@
             </div>
         {:else}
             <div class="empty">
-                Select a conversation
+                Select a chat or start a new one
             </div>
         {/if}
     </main>
+
+    {#if isNewChatModalOpen}
+    <div class="backdrop">
+        <div class="modal">
+        <h2>Add new chat</h2>
+
+        <input
+            type="text"
+            placeholder="Username"
+            bind:value={username}
+        />
+
+        <div class="actions">
+            <button on:click={addChat}>Add</button>
+            <button on:click={closeModal}>Cancel</button>
+        </div>
+        </div>
+    </div>
+    {/if}
 </div>

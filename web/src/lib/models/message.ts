@@ -1,5 +1,5 @@
 export type Message = {
-    id: string
+    id: number
     fromMe: boolean
     text: string
 };
