@@ -1,0 +1,105 @@
+package handlers
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/labstack/echo/v5"
+	"github.com/tangerinefrog/chatter/internal/http/dto"
+	"github.com/tangerinefrog/chatter/internal/messages"
+	"go.uber.org/zap"
+)
+
+type messagesHandler struct {
+	messagesRepo *messages.MessagesRepository
+	logger       *zap.Logger
+}
+
+func NewMessagesHandler(messagesRepo *messages.MessagesRepository, logger *zap.Logger) *messagesHandler {
+	return &messagesHandler{
+		messagesRepo: messagesRepo,
+		logger:       logger,
+	}
+}
+
+func (h *messagesHandler) CreateMessage(c *echo.Context) error {
+	var req dto.CreateMessageRequest
+
+	err := c.Bind(&req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+	
+	err = c.Validate(&req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+
+	userID, ok := c.Get("user_id").(int32)
+	if !ok {
+		return c.NoContent(http.StatusUnauthorized)
+	}
+	chatID, ok := c.Get("chat_id").(int32)
+	if !ok {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	id, err := h.messagesRepo.CreateMessage(c.Request().Context(), userID, chatID, req.Content)
+	if err != nil {
+		h.logger.Error("Could not save chat message", zap.Int32("UserID", userID), zap.Int32("ChatID", chatID), zap.Error(err))
+		return echo.NewHTTPError(http.StatusBadRequest, "error while saving message to server")
+	}
+
+	resp := dto.CreateMessageResponse{
+		MessageID: id,
+		CreatedAt: time.Now(),
+	}
+
+	return c.JSON(http.StatusCreated, resp)
+}
+
+func (h *messagesHandler) ListChatMessages(c *echo.Context) error {
+	var req dto.ListChatMessagesRequest
+
+	err := c.Bind(&req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	err = c.Validate(&req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	userID, ok := c.Get("user_id").(int32)
+	if !ok {
+		return c.NoContent(http.StatusUnauthorized)
+	}
+
+	chatID, ok := c.Get("chat_id").(int32)
+	if !ok {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	dbMessages, err := h.messagesRepo.ListChatMessages(c.Request().Context(), chatID, req.PageNumber)
+	if err != nil {
+		h.logger.Error("Could not load messages for chat from DB", zap.Int32("ChatID", chatID), zap.Error(err))
+		return echo.NewHTTPError(http.StatusBadRequest, "could not load chat messages")
+	}
+
+	messages := make([]dto.Message, len(dbMessages))
+	for i, m := range dbMessages {
+		messages[i] = dto.Message{
+			ID:      m.ID,
+			Content: m.Content,
+			FromMe:  m.UserID == userID,
+			UserID:  m.UserID,
+		}
+	}
+	resp := dto.ListChatMessagesResponse{
+		Messages: messages,
+	}
+
+	return c.JSON(http.StatusCreated, resp)
+}

@@ -55,8 +55,6 @@ func (r *MessagesRepository) ListChatMessages(
 		Offset: offset,
 	})
 
-	fmt.Printf("MESSAGES FROM DB: %v\n", rows)
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil

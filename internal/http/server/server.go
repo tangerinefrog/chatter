@@ -10,17 +10,19 @@ import (
 	"github.com/tangerinefrog/chatter/internal/http/handlers"
 	mw "github.com/tangerinefrog/chatter/internal/http/middleware"
 	"github.com/tangerinefrog/chatter/internal/http/validator"
+	"github.com/tangerinefrog/chatter/internal/messages"
 	"github.com/tangerinefrog/chatter/internal/users"
 	"go.uber.org/zap"
 )
 
 type Server struct {
-	addr       string
-	echo       *echo.Echo
-	logger     *zap.Logger
-	usersRepo  *users.UsersRepository
-	chatsRepo  *chats.ChatsRepository
-	jwtManager *jwt.JwtManager
+	addr         string
+	echo         *echo.Echo
+	logger       *zap.Logger
+	usersRepo    *users.UsersRepository
+	chatsRepo    *chats.ChatsRepository
+	messagesRepo *messages.MessagesRepository
+	jwtManager   *jwt.JwtManager
 }
 
 func NewServer(
@@ -28,6 +30,7 @@ func NewServer(
 	logger *zap.Logger,
 	usersRepo *users.UsersRepository,
 	chatsRepo *chats.ChatsRepository,
+	messagesRepo *messages.MessagesRepository,
 	jwtManager *jwt.JwtManager,
 ) *Server {
 	e := echo.New()
@@ -39,12 +42,13 @@ func NewServer(
 	e.Use(middleware.CORS("*"))
 
 	s := Server{
-		addr:       addr,
-		echo:       e,
-		logger:     logger,
-		usersRepo:  usersRepo,
-		chatsRepo:  chatsRepo,
-		jwtManager: jwtManager,
+		addr:         addr,
+		echo:         e,
+		logger:       logger,
+		usersRepo:    usersRepo,
+		chatsRepo:    chatsRepo,
+		messagesRepo: messagesRepo,
+		jwtManager:   jwtManager,
 	}
 
 	s.registerRoutes()
@@ -71,6 +75,12 @@ func (s *Server) registerRoutes() {
 	chats := api.Group("/chats")
 	chats.Use(mw.Auth(s.jwtManager))
 	chats.POST("", chatsHandler.CreateChat)
+
+	messagesHandler := handlers.NewMessagesHandler(s.messagesRepo, s.logger)
+	messages := chats.Group("/:chatID/messages")
+	messages.Use(mw.Chat())
+	messages.GET("", messagesHandler.ListChatMessages)
+	messages.POST("", messagesHandler.CreateMessage)
 
 	s.echo.GET("/health", func(c *echo.Context) error {
 		return c.NoContent(http.StatusOK)
