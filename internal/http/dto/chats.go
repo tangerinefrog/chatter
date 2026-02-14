@@ -11,7 +11,7 @@ type NewChatResponse struct {
 }
 
 type ListChatsForUserResponse struct {
-	Chats []Chat `json:"chat"`
+	Chats []Chat `json:"chats"`
 }
 
 type Chat struct {

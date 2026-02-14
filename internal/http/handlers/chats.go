@@ -101,16 +101,21 @@ func (h *chatsHandler) ListUserChats(c *echo.Context) error {
 
 	for i, c := range dbChats {
 		participants := make([]dto.ChatParticipant, len(c.Participants))
+		chatName := c.Name
 		for i, p := range c.Participants {
 			participants[i] = dto.ChatParticipant{
 				ID:       p.ID,
 				Username: p.Username,
 			}
+			if chatName == "" && p.ID != userID {
+				chatName = p.Username
+			}
 		}
+
 		chats[i] = dto.Chat{
 			ID:           c.ID,
 			Type:         c.Type,
-			Name:         c.Name,
+			Name:         chatName,
 			Participants: participants,
 			LastMessage:  c.LastMessage,
 		}
