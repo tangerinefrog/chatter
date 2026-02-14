@@ -87,6 +87,7 @@ SELECT
     c.id,
     c.type,
     c.name,
+    c.created_at,
     (
         SELECT json_agg(row_to_json(t))
         FROM (
@@ -97,7 +98,14 @@ SELECT
             INNER JOIN users u on cu.user_id = u.id
             where cu.chat_id = c.id
         ) t
-    ) chat_users_json
+    ) chat_users_json,
+    (
+        SELECT 
+            m.content
+        FROM messages m
+        ORDER BY m.created_at DESC
+        LIMIT 1
+    ) last_message
 FROM chats c
 INNER JOIN chats_users cu ON cu.chat_id = c.id
 WHERE 
@@ -108,7 +116,9 @@ type ListUserChatsRow struct {
 	ID            int32
 	Type          string
 	Name          pgtype.Text
+	CreatedAt     pgtype.Timestamp
 	ChatUsersJson []byte
+	LastMessage   string
 }
 
 func (q *Queries) ListUserChats(ctx context.Context, userID int32) ([]ListUserChatsRow, error) {
@@ -124,7 +134,9 @@ func (q *Queries) ListUserChats(ctx context.Context, userID int32) ([]ListUserCh
 			&i.ID,
 			&i.Type,
 			&i.Name,
+			&i.CreatedAt,
 			&i.ChatUsersJson,
+			&i.LastMessage,
 		); err != nil {
 			return nil, err
 		}

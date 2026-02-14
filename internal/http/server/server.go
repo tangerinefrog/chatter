@@ -75,6 +75,7 @@ func (s *Server) registerRoutes() {
 	chats := api.Group("/chats")
 	chats.Use(mw.Auth(s.jwtManager))
 	chats.POST("", chatsHandler.CreateChat)
+	chats.GET("", chatsHandler.ListUserChats)
 
 	messagesHandler := handlers.NewMessagesHandler(s.messagesRepo, s.logger)
 	messages := chats.Group("/:chatID/messages")

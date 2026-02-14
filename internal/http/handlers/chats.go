@@ -84,3 +84,41 @@ func (h *chatsHandler) CreateChat(c *echo.Context) error {
 
 	return c.JSON(http.StatusCreated, dto.NewChatResponse{ID: chatID})
 }
+
+func (h *chatsHandler) ListUserChats(c *echo.Context) error {
+	userID, ok := c.Get("user_id").(int32)
+	if !ok {
+		return c.NoContent(http.StatusUnauthorized)
+	}
+
+	dbChats, err := h.chatsRepo.ListUserChats(c.Request().Context(), userID)
+	if err != nil {
+		h.logger.Error("Could not get chats for user", zap.Int32("UserID", userID), zap.Error(err))
+		return echo.NewHTTPError(http.StatusBadRequest, "could not get chats")
+	}
+
+	chats := make([]dto.Chat, len(dbChats))
+
+	for i, c := range dbChats {
+		participants := make([]dto.ChatParticipant, len(c.Participants))
+		for i, p := range c.Participants {
+			participants[i] = dto.ChatParticipant{
+				ID:       p.ID,
+				Username: p.Username,
+			}
+		}
+		chats[i] = dto.Chat{
+			ID:           c.ID,
+			Type:         c.Type,
+			Name:         c.Name,
+			Participants: participants,
+			LastMessage:  c.LastMessage,
+		}
+	}
+
+	resp := dto.ListChatsForUserResponse{
+		Chats: chats,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}

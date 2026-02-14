@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -82,4 +83,35 @@ func (r *ChatsRepository) IsDirectChatExists(ctx context.Context, userID_1, user
 	}
 
 	return false, nil
+}
+
+func (r *ChatsRepository) ListUserChats(ctx context.Context, userID int32) ([]Chat, error) {
+	chatRows, err := r.q.ListUserChats(ctx, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	chats := make([]Chat, len(chatRows))
+	for i, c := range chatRows {
+		var participants []ChatParticipant
+		err := json.Unmarshal(c.ChatUsersJson, &participants)
+		if err != nil {
+			return nil, err
+		}
+
+		chats[i] = Chat{
+			ID:           c.ID,
+			Type:         c.Type,
+			Name:         c.Name.String,
+			LastMessage:  c.LastMessage,
+			Participants: participants,
+			CreatedAt:    c.CreatedAt.Time,
+		}
+	}
+
+	return chats, nil
 }

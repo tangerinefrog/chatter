@@ -9,3 +9,20 @@ type CreateChatRequest struct {
 type NewChatResponse struct {
 	ID int32 `json:"id"`
 }
+
+type ListChatsForUserResponse struct {
+	Chats []Chat `json:"chat"`
+}
+
+type Chat struct {
+	ID           int32             `json:"id"`
+	Type         string            `json:"type"`
+	Name         string            `json:"name"`
+	Participants []ChatParticipant `json:"participants"`
+	LastMessage  string            `json:"last_message"`
+}
+
+type ChatParticipant struct {
+	ID       int32  `json:"id"`
+	Username string `json:"username"`
+}

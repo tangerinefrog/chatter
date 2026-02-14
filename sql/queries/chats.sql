@@ -24,6 +24,7 @@ SELECT
     c.id,
     c.type,
     c.name,
+    c.created_at,
     (
         SELECT json_agg(row_to_json(t))
         FROM (
@@ -34,7 +35,14 @@ SELECT
             INNER JOIN users u on cu.user_id = u.id
             where cu.chat_id = c.id
         ) t
-    ) chat_users_json
+    ) chat_users_json,
+    (
+        SELECT 
+            m.content
+        FROM messages m
+        ORDER BY m.created_at DESC
+        LIMIT 1
+    ) last_message
 FROM chats c
 INNER JOIN chats_users cu ON cu.chat_id = c.id
 WHERE 
