@@ -47,7 +47,7 @@ func (r *ChatsRepository) Create(ctx context.Context, name string, chatType Chat
 	chatID, err := qtx.CreateChat(ctx, db.CreateChatParams{
 		Type:      string(chatType),
 		Name:      nameVal,
-		CreatedBy: pgtype.Int4{Int32: userID},
+		CreatedBy: pgtype.Int4{Int32: userID, Valid: true},
 	})
 
 	if err != nil {

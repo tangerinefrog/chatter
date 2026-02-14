@@ -24,7 +24,7 @@ type ChatsUser struct {
 
 type Message struct {
 	ID        int64
-	ChatID    pgtype.Int4
+	ChatID    int32
 	UserID    pgtype.Int4
 	Content   string
 	CreatedAt pgtype.Timestamp
