@@ -3,9 +3,9 @@
     import type { Message } from '$lib/models/message';
     import { getChats, getMessages, createChat } from '$lib/api/client';
     import { connect, disconnect, sendEvent, setOnNewMessageCallback } from '$lib/websocket/client';
-    import { onMount, onDestroy } from 'svelte';
+    import { onMount, onDestroy, tick } from 'svelte';
     import { setMessages, messagesStore } from '$lib/stores/messages';
-    import { formatTimestamp as formatDate } from '$lib/utils/date';
+    import { formatTimestamp as formatDate, formatChatDate } from '$lib/utils/date';
     import type { ApiError } from '$lib/api/client';
     import { KEYBOARD_KEYS, MESSAGE_PAGE_SIZE } from '$lib/constants';
     
@@ -19,6 +19,7 @@
     let isLoadingChats = false;
     let isLoadingMessages = false;
     let error: string | null = null;
+    let messagesContainer: HTMLDivElement;
 
     $: messages = currentChat ? $messagesStore[currentChat?.id] ?? [] : [];
 
@@ -42,6 +43,7 @@
                 type: chat.type as 'direct' | 'group',
                 name: chat.name ?? null,
                 lastMessage: chat.last_message ?? null,
+                lastMessageDate: null, // Will be updated when messages are loaded or received
                 createdAt: chat.created_at
             }));
         } catch (err) {
@@ -68,6 +70,23 @@
             }));
 
             setMessages(chatID, msgs);
+            
+            if (msgs.length > 0) {
+                const lastMsg = msgs[msgs.length - 1];
+                const chatIndex = chats.findIndex(c => c.id === chatID);
+                if (chatIndex !== -1) {
+                    chats = chats.map((chat, idx) => 
+                        idx === chatIndex 
+                            ? { ...chat, lastMessageDate: lastMsg.createdAt }
+                            : chat
+                    );
+                    if (currentChat?.id === chatID) {
+                        currentChat = { ...currentChat, lastMessageDate: lastMsg.createdAt };
+                    }
+                }
+            }
+            
+            await scrollToBottom();
         } catch (err) {
             const apiError = err as ApiError;
             error = apiError.message || 'Failed to load messages';
@@ -90,6 +109,15 @@
         });
 
         currentMessage = '';
+    }
+
+    async function scrollToBottom() {
+        if (messagesContainer) {
+            await tick();
+            requestAnimationFrame(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            });
+        }
     }    
 
     function openModal() {
@@ -141,7 +169,7 @@
         }
     }
 
-    function handleNewMessage(chatId: number, message: Message) {
+    async function handleNewMessage(chatId: number, message: Message) {
         const chatIndex = chats.findIndex(chat => chat.id === chatId);
         
         if (chatIndex === -1) {
@@ -151,7 +179,8 @@
 
         const updatedChat: Chat = {
             ...chats[chatIndex],
-            lastMessage: message.text
+            lastMessage: message.text,
+            lastMessageDate: message.createdAt
         };
 
         chats = [
@@ -160,7 +189,10 @@
         ];
 
         if (currentChat?.id === chatId) {
-            currentChat = updatedChat;
+            currentChat = { ...updatedChat };
+            if (message.fromMe) {
+                await scrollToBottom();
+            }
         }
     }
 
@@ -203,7 +235,12 @@
                         on:keydown={(e) => handleContactKeydown(e, chat)}
                         aria-label="Chat with {chat.name || 'Unknown'}"
                     >
-                        <div class="contact-name">{chat.name || 'Unknown'}</div>
+                        <div class="contact-header">
+                            <div class="contact-name">{chat.name || 'Unknown'}</div>
+                            {#if chat.lastMessageDate}
+                                <div class="contact-date">{formatChatDate(chat.lastMessageDate)}</div>
+                            {/if}
+                        </div>
                         <div class="contact-last">{chat.lastMessage || 'No messages'}</div>
                     </div>
                 {/each}
@@ -217,7 +254,7 @@
                 {currentChat.name}
             </div>
 
-            <div class="messages">
+            <div class="messages" bind:this={messagesContainer}>
                 {#if isLoadingMessages}
                     <div class="loading">Loading messages...</div>
                 {:else if messages.length === 0}
@@ -283,6 +320,9 @@
                         if (e.key === 'Enter') {
                             e.preventDefault();
                             addChat();
+                        } else if (e.key === KEYBOARD_KEYS.ESCAPE) {
+                            e.preventDefault();
+                            closeModal();
                         }
                     }}
                     aria-label="Username"
