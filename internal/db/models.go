@@ -13,13 +13,13 @@ type Chat struct {
 	Type      string
 	Name      pgtype.Text
 	CreatedBy pgtype.Int4
-	CreatedAt pgtype.Timestamp
+	CreatedAt pgtype.Timestamptz
 }
 
 type ChatsUser struct {
 	ChatID    int32
 	UserID    int32
-	CreatedAt pgtype.Timestamp
+	CreatedAt pgtype.Timestamptz
 }
 
 type Message struct {
@@ -27,13 +27,13 @@ type Message struct {
 	ChatID    int32
 	UserID    pgtype.Int4
 	Content   string
-	CreatedAt pgtype.Timestamp
+	CreatedAt pgtype.Timestamptz
 }
 
 type User struct {
 	ID           int32
 	Username     string
 	PasswordHash string
-	CreatedAt    pgtype.Timestamp
-	UpdatedAt    pgtype.Timestamp
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
 }

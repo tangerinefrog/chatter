@@ -60,7 +60,7 @@ type ListTopNMessagesRow struct {
 	ID        int64
 	UserID    pgtype.Int4
 	Content   string
-	CreatedAt pgtype.Timestamp
+	CreatedAt pgtype.Timestamptz
 }
 
 func (q *Queries) ListTopNMessages(ctx context.Context, arg ListTopNMessagesParams) ([]ListTopNMessagesRow, error) {
