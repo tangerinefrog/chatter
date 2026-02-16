@@ -1,7 +1,8 @@
 <script lang="ts">
     import type { Chat } from '$lib/models/chat';
+    import type { Message } from '$lib/models/message';
     import { getChats, getMessages, createChat } from '$lib/api/client';
-    import { connect, disconnect, sendEvent } from '$lib/websocket/client';
+    import { connect, disconnect, sendEvent, setOnNewMessageCallback } from '$lib/websocket/client';
     import { onMount, onDestroy } from 'svelte';
     import { setMessages, messagesStore } from '$lib/stores/messages';
     import { formatTimestamp as formatDate } from '$lib/utils/date';
@@ -140,9 +141,33 @@
         }
     }
 
+    function handleNewMessage(chatId: number, message: Message) {
+        const chatIndex = chats.findIndex(chat => chat.id === chatId);
+        
+        if (chatIndex === -1) {
+            refreshChats();
+            return;
+        }
+
+        const updatedChat: Chat = {
+            ...chats[chatIndex],
+            lastMessage: message.text
+        };
+
+        chats = [
+            updatedChat,
+            ...chats.filter(chat => chat.id !== chatId)
+        ];
+
+        if (currentChat?.id === chatId) {
+            currentChat = updatedChat;
+        }
+    }
+
     onMount(() => {
         connect();
         refreshChats();
+        setOnNewMessageCallback(handleNewMessage);
     });
 
     onDestroy(() => {
@@ -261,7 +286,6 @@
                         }
                     }}
                     aria-label="Username"
-                    autofocus
                 />
 
                 <div class="actions">

@@ -8,6 +8,11 @@ const socketUrl = 'ws://localhost:8080/ws';
 
 let socket: WebSocket | null = null;
 let isIntentionalClose = false;
+let onNewMessageCallback: ((chatId: number, message: Message) => void) | null = null;
+
+export function setOnNewMessageCallback(callback: (chatId: number, message: Message) => void) {
+    onNewMessageCallback = callback;
+}
 
 export function connect() {
     wsStore.update(s => ({ ...s, status: 'connecting' }));
@@ -68,6 +73,10 @@ function handleEvent(event: WsEvent) {
                             : new Date()
                 };
                 appendMessage(event.chat_id, message);
+                
+                if (onNewMessageCallback) {
+                    onNewMessageCallback(event.chat_id, message);
+                }
             }
             break;
         default:
