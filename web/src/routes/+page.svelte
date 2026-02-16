@@ -19,14 +19,13 @@
         }
 
         currentChat = chat;   
-        messages = [];
+        loadMessages(chat.id, 1);
     }
 
     async function refreshChats() {
         try {
             const resp = await apiFetch('/chats', {
-                method: 'GET',
-                credentials: 'include'
+                method: 'GET'
             });
 
             chats = resp.chats.map((chat :any) => {
@@ -41,16 +40,59 @@
         } catch (err: any) {
             console.warn('Could not load chats from backend:', err);
             chats = [];
-        }        
+        }
     }
 
-    function sendMessage() {
-        if (!currentMessage.trim()) return;
+    async function loadMessages(chatID: number, page: number) {
+        try {
+            const resp = await apiFetch(`/chats/${chatID}/messages?page=${page}`, {
+                method: 'GET'
+            });
 
-        messages = [
-            ...messages,
-            { id: 2, fromMe: true, text: currentMessage }
-        ];
+            messages = resp.messages.map((message :any) => {
+                return {
+                    id: message.id,
+                    text: message.content,
+                    fromMe: message.from_me,
+                    userId: message.user_id,
+                    createdAt: message.created_at
+                };
+            });
+        } catch (err: any) {
+            console.warn('Could not load messages from backend:', err);
+        }
+    }
+
+    async function sendMessage() {
+        const messageClean = currentMessage.trim();
+
+        if (!messageClean || !currentChat?.id) {
+            return;
+        }        
+
+        try {
+            const req = {
+                content: messageClean
+            };
+
+            const resp = await apiFetch(`/chats/${currentChat?.id}/messages`, {
+                method: 'POST',
+                body: JSON.stringify(req),
+            });
+            const newMessage: Message = {
+                id: resp.id,
+                createdAt: resp.created_at,
+                fromMe: true,
+                text: messageClean
+            } 
+
+            messages = [
+                ...messages,
+                newMessage
+            ];
+        } catch (err: any) {
+            console.warn('Could not load messages from backend:', err);
+        }
 
         currentMessage = '';
     }    

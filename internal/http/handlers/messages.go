@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"net/http"
+	"sort"
+	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v5"
@@ -29,12 +31,11 @@ func (h *messagesHandler) CreateMessage(c *echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
-	
+
 	err = c.Validate(&req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-
 
 	userID, ok := c.Get("user_id").(int32)
 	if !ok {
@@ -60,16 +61,10 @@ func (h *messagesHandler) CreateMessage(c *echo.Context) error {
 }
 
 func (h *messagesHandler) ListChatMessages(c *echo.Context) error {
-	var req dto.ListChatMessagesRequest
-
-	err := c.Bind(&req)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
-	}
-
-	err = c.Validate(&req)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	pageParam := c.QueryParam("page")
+	page, err := strconv.Atoi(pageParam)
+	if err != nil || page < 1 {
+		return echo.NewHTTPError(http.StatusBadRequest, "incorrect page number parameter")
 	}
 
 	userID, ok := c.Get("user_id").(int32)
@@ -82,7 +77,7 @@ func (h *messagesHandler) ListChatMessages(c *echo.Context) error {
 		return c.NoContent(http.StatusNotFound)
 	}
 
-	dbMessages, err := h.messagesRepo.ListChatMessages(c.Request().Context(), chatID, req.PageNumber)
+	dbMessages, err := h.messagesRepo.ListChatMessages(c.Request().Context(), chatID, int32(page))
 	if err != nil {
 		h.logger.Error("Could not load messages for chat from DB", zap.Int32("ChatID", chatID), zap.Error(err))
 		return echo.NewHTTPError(http.StatusBadRequest, "could not load chat messages")
@@ -97,6 +92,11 @@ func (h *messagesHandler) ListChatMessages(c *echo.Context) error {
 			UserID:  m.UserID,
 		}
 	}
+
+	sort.Slice(messages, func(i, j int) bool {
+		return messages[i].ID < messages[j].ID
+	})
+
 	resp := dto.ListChatMessagesResponse{
 		Messages: messages,
 	}

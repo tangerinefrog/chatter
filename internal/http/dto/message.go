@@ -11,10 +11,6 @@ type CreateMessageResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-type ListChatMessagesRequest struct {
-	PageNumber int32 `json:"page_number" validate:"required,min=1"`
-}
-
 type ListChatMessagesResponse struct {
 	Messages []Message `json:"messages"`
 }
