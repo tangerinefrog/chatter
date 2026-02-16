@@ -39,7 +39,7 @@
                 };
             });
         } catch (err: any) {
-            console.warn('Could not load chats from backend', err);
+            console.warn('Could not load chats from backend:', err);
             chats = [];
         }        
     }
@@ -64,10 +64,27 @@
         username = '';
     }
 
-    function addChat() {
-        if (!username.trim()) return;
+    async function addChat() {
+        if (!username.trim()) {
+            return;
+        }
+        const req = {
+            is_direct: true,
+            participant_usernames: [username]
+        }
 
-        console.log('Creating chat with:', username);
+        try {
+            await apiFetch('/chats', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(req),
+            });
+
+            await refreshChats();
+        } catch (err: any) {
+            console.warn('Could not create chat:', err);
+        }
 
         closeModal();
     }
@@ -153,14 +170,15 @@
         <h2>Add new chat</h2>
 
         <input
+            class="input"
             type="text"
             placeholder="Username"
             bind:value={username}
         />
 
         <div class="actions">
-            <button on:click={addChat}>Add</button>
-            <button on:click={closeModal}>Cancel</button>
+            <button class="button" on:click={addChat}>Add</button>
+            <button class="button button-secondary" on:click={closeModal}>Cancel</button>
         </div>
         </div>
     </div>

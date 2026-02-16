@@ -55,8 +55,16 @@ body {
     font-weight: 600;
 }
 
+.button-secondary {
+    background: var(--bg-elevated);
+}
+
 .button:hover {
     background: var(--primary-hover);
+}
+
+.button-secondary:hover {
+    background: var(--bg-main);
 }
 
 .button:disabled {
