@@ -16,12 +16,7 @@
 h2 {
     margin: 0;
     text-align: center;
-    color: white;
-}
-
-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+    color: var(--text-white);
 }
 
 .error {
@@ -41,5 +36,5 @@ button:disabled {
     cursor: pointer;
     font-weight: 600;
     background: none;
-    color: #818cf8;
+    color: var(--text-link);
 }

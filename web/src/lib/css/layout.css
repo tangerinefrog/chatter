@@ -2,14 +2,24 @@
   --bg-main: #0f172a;
   --bg-surface: #111827;
   --bg-elevated: #1e293b;
+  --bg-input: #334155;
 
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
 
   --text-main: #e2e8f0;
+  --text-white: #ffffff;
+  --text-muted: #64748b;
+  --text-link: #818cf8;
   --text-danger: #f87171;
 
+  --border-color: #1e293b;
+
+  --backdrop: rgba(0, 0, 0, 0.5);
+  --shadow: rgba(0, 0, 0, 0.3);
+
   --radius: 12px;
+  --radius-sm: 8px;
 }
 
 body {
@@ -17,10 +27,7 @@ body {
   padding: 0;
   font-size: 16px;
   line-height: 1.6;
-  color: #333;
-  background-color: #fff;
   min-height: 100vh;
-  margin: 0;
   background: var(--bg-main);
   color: var(--text-main);
   font-family: system-ui, sans-serif;
@@ -30,15 +37,15 @@ body {
     background: var(--bg-elevated);
     padding: 2rem;
     border-radius: var(--radius);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 25px var(--shadow);
 }
 
 .input {
     padding: 0.75rem;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     border: none;
-    background: #334155;
-    color: white;
+    background: var(--bg-input);
+    color: var(--text-white);
 }
 
 .input:focus {
@@ -47,10 +54,10 @@ body {
 
 .button {
     padding: 0.75rem 1rem;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     border: none;
     background: var(--primary);
-    color: white;
+    color: var(--text-white);
     cursor: pointer;
     font-weight: 600;
 }
