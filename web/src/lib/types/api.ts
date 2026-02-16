@@ -3,6 +3,7 @@ export interface ApiChat {
     type: 'direct' | 'group';
     name: string | null;
     last_message: string | null;
+    last_message_date: string;
     created_at: string;
 }
 

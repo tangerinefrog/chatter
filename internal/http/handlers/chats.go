@@ -113,11 +113,12 @@ func (h *chatsHandler) ListUserChats(c *echo.Context) error {
 		}
 
 		chats[i] = dto.Chat{
-			ID:           c.ID,
-			Type:         c.Type,
-			Name:         chatName,
-			Participants: participants,
-			LastMessage:  c.LastMessage,
+			ID:              c.ID,
+			Type:            c.Type,
+			Name:            chatName,
+			Participants:    participants,
+			LastMessage:     c.LastMessage,
+			LastMessageDate: c.LastMessageDate,
 		}
 	}
 

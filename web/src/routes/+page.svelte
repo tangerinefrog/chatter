@@ -5,9 +5,9 @@
     import { connect, disconnect, sendEvent, setOnNewMessageCallback } from '$lib/websocket/client';
     import { onMount, onDestroy, tick } from 'svelte';
     import { setMessages, messagesStore } from '$lib/stores/messages';
-    import { formatTimestamp as formatDate, formatChatDate } from '$lib/utils/date';
+    import { formatTimestamp } from '$lib/utils/date';
     import type { ApiError } from '$lib/api/client';
-    import { KEYBOARD_KEYS, MESSAGE_PAGE_SIZE } from '$lib/constants';
+    import { KEYBOARD_KEYS } from '$lib/constants';
     
     import '$lib/css/main.css';
     
@@ -43,7 +43,7 @@
                 type: chat.type as 'direct' | 'group',
                 name: chat.name ?? null,
                 lastMessage: chat.last_message ?? null,
-                lastMessageDate: null, // Will be updated when messages are loaded or received
+                lastMessageDate: new Date(chat.last_message_date),
                 createdAt: chat.created_at
             }));
         } catch (err) {
@@ -238,7 +238,7 @@
                         <div class="contact-header">
                             <div class="contact-name">{chat.name || 'Unknown'}</div>
                             {#if chat.lastMessageDate}
-                                <div class="contact-date">{formatChatDate(chat.lastMessageDate)}</div>
+                                <div class="contact-date">{formatTimestamp(chat.lastMessageDate)}</div>
                             {/if}
                         </div>
                         <div class="contact-last">{chat.lastMessage || 'No messages'}</div>
@@ -264,8 +264,8 @@
                         <div class="message-row {msg.fromMe ? 'me' : 'them'}">
                             <div class="bubble">
                                 <div class="message-text">{msg.text}</div>
-                                <div class="message-timestamp" aria-label="Sent at {formatDate(msg.createdAt)}">
-                                    {formatDate(msg.createdAt)}
+                                <div class="message-timestamp" aria-label="Sent at {formatTimestamp(msg.createdAt)}">
+                                    {formatTimestamp(msg.createdAt)}
                                 </div>
                             </div>
                         </div>

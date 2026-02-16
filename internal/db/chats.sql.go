@@ -133,14 +133,18 @@ SELECT
             where cu.chat_id = c.id
         ) t
     ) chat_users_json,
-    COALESCE((
-        SELECT 
-            m.content
-        FROM messages m
-        WHERE m.chat_id = c.id
-        ORDER BY m.created_at DESC
-        LIMIT 1
-    ), '')::TEXT last_message
+    (
+        SELECT row_to_json(t)
+        FROM (
+            SELECT 
+                m.content,
+                m.created_at
+            FROM messages m
+            WHERE m.chat_id = c.id
+            ORDER BY m.created_at DESC
+            LIMIT 1
+        ) t
+    ) last_message_json
 FROM chats c
 INNER JOIN chats_users cu ON cu.chat_id = c.id
 WHERE 
@@ -148,12 +152,12 @@ WHERE
 `
 
 type ListUserChatsRow struct {
-	ID            int32
-	Type          string
-	Name          pgtype.Text
-	CreatedAt     pgtype.Timestamptz
-	ChatUsersJson []byte
-	LastMessage   string
+	ID              int32
+	Type            string
+	Name            pgtype.Text
+	CreatedAt       pgtype.Timestamptz
+	ChatUsersJson   []byte
+	LastMessageJson []byte
 }
 
 func (q *Queries) ListUserChats(ctx context.Context, userID int32) ([]ListUserChatsRow, error) {
@@ -171,7 +175,7 @@ func (q *Queries) ListUserChats(ctx context.Context, userID int32) ([]ListUserCh
 			&i.Name,
 			&i.CreatedAt,
 			&i.ChatUsersJson,
-			&i.LastMessage,
+			&i.LastMessageJson,
 		); err != nil {
 			return nil, err
 		}

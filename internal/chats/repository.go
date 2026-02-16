@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -103,13 +104,24 @@ func (r *ChatsRepository) ListChatsForUser(ctx context.Context, userID int32) ([
 			return nil, err
 		}
 
+		var lastMessage struct {
+			Content   string    `json:"content"`
+			CreatedAt time.Time `json:"created_at"`
+		}
+
+		err = json.Unmarshal(c.LastMessageJson, &lastMessage)
+		if err != nil {
+			return nil, err
+		}
+
 		chats[i] = Chat{
-			ID:           c.ID,
-			Type:         c.Type,
-			Name:         c.Name.String,
-			LastMessage:  c.LastMessage,
-			Participants: participants,
-			CreatedAt:    c.CreatedAt.Time,
+			ID:              c.ID,
+			Type:            c.Type,
+			Name:            c.Name.String,
+			LastMessage:     lastMessage.Content,
+			LastMessageDate: lastMessage.CreatedAt.UTC(),
+			Participants:    participants,
+			CreatedAt:       c.CreatedAt.Time,
 		}
 	}
 
