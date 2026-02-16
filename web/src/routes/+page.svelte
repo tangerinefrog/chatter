@@ -2,6 +2,7 @@
     import type { Chat } from '$lib/models/chat';
     import type { Message } from '$lib/models/message';
     import { apiFetch } from '$lib/api/client';
+    import { connect, disconnect, sendEvent } from '$lib/websocket/client';
     import { onMount } from 'svelte';
     
     import '$lib/css/main.css';
@@ -70,29 +71,11 @@
             return;
         }        
 
-        try {
-            const req = {
-                content: messageClean
-            };
-
-            const resp = await apiFetch(`/chats/${currentChat?.id}/messages`, {
-                method: 'POST',
-                body: JSON.stringify(req),
-            });
-            const newMessage: Message = {
-                id: resp.id,
-                createdAt: resp.created_at,
-                fromMe: true,
-                text: messageClean
-            } 
-
-            messages = [
-                ...messages,
-                newMessage
-            ];
-        } catch (err: any) {
-            console.warn('Could not load messages from backend:', err);
-        }
+        sendEvent({
+            type: 'send_message',
+            chat_id: currentChat.id,
+            content: messageClean
+        });
 
         currentMessage = '';
     }    
@@ -142,6 +125,7 @@
     }
 
     onMount(() => {
+        connect();
         refreshChats();
     });
     
