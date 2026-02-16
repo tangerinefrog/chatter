@@ -115,3 +115,25 @@ func (r *ChatsRepository) ListUserChats(ctx context.Context, userID int32) ([]Ch
 
 	return chats, nil
 }
+
+func (r *ChatsRepository) ListChatUsers(ctx context.Context, chatID int32) ([]*db.User, error) {
+	rows, err := r.q.ListChatUsers(ctx, chatID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	users := make([]*db.User, len(rows))
+
+	for i, u := range rows {
+		users[i] = &db.User{
+			ID:       u.UserID,
+			Username: u.Username,
+		}
+	}
+
+	return users, nil
+}

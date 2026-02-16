@@ -82,6 +82,40 @@ func (q *Queries) GetDirectChatBetweenUsers(ctx context.Context, arg GetDirectCh
 	return id, err
 }
 
+const listChatUsers = `-- name: ListChatUsers :many
+SELECT
+    cu.user_id,
+    u.username
+FROM chats_users cu
+INNER JOIN users u ON u.id = cu.user_id
+WHERE cu.chat_id = $1
+`
+
+type ListChatUsersRow struct {
+	UserID   int32
+	Username string
+}
+
+func (q *Queries) ListChatUsers(ctx context.Context, chatID int32) ([]ListChatUsersRow, error) {
+	rows, err := q.db.Query(ctx, listChatUsers, chatID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListChatUsersRow
+	for rows.Next() {
+		var i ListChatUsersRow
+		if err := rows.Scan(&i.UserID, &i.Username); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUserChats = `-- name: ListUserChats :many
 SELECT
     c.id,

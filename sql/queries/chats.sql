@@ -59,3 +59,11 @@ WHERE
     AND cu1.user_id = $1
     AND cu2.user_id = $2
 LIMIT 1;
+
+-- name: ListChatUsers :many
+SELECT
+    cu.user_id,
+    u.username
+FROM chats_users cu
+INNER JOIN users u ON u.id = cu.user_id
+WHERE cu.chat_id = $1;
