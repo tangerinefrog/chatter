@@ -5,6 +5,7 @@
     import { connect, disconnect, sendEvent } from '$lib/websocket/client';
     import { onMount, onDestroy } from 'svelte';
     import { setMessages, messagesStore } from '$lib/stores/messages';
+    import { formatTimestamp as formatDate } from '$lib/utils/date';
     
     import '$lib/css/main.css';
     
@@ -61,6 +62,8 @@
                     createdAt: message.created_at
                 };
             });
+
+            console.log(msgs)
 
             setMessages(chatID, msgs);
         } catch (err: any) {
@@ -174,7 +177,8 @@
                 {#each messages as msg}
                     <div class="message-row {msg.fromMe ? 'me' : 'them'}">
                         <div class="bubble">
-                            {msg.text}
+                            <div class="message-text">{msg.text}</div>
+                            <div class="message-timestamp">{formatDate(msg.createdAt)}</div>
                         </div>
                     </div>
                 {/each}

@@ -55,7 +55,7 @@ function handleEvent(event: WsEvent) {
                     fromMe: event.from_me ?? false,
                     id: event.message_id,
                     text: event.content ?? "",
-                    createdAt: event.date?.toISOString() ?? ""
+                    createdAt: event.date ?? new Date()
                 }
                 appendMessage(event.chat_id, message);
             }
