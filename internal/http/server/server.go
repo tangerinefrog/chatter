@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -42,7 +43,16 @@ func NewServer(
 
 	e.Use(middleware.Recover())
 	e.Use(middleware.RequestLogger())
-	e.Use(middleware.CORS("*"))
+
+	webAddr := os.Getenv("WEB_ADDR")
+	if webAddr == "" {
+		logger.Fatal("Web address is not defined in the .env file")
+	}
+
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins:     []string{webAddr},
+		AllowCredentials: true,
+	}))
 
 	s := Server{
 		addr:         addr,
