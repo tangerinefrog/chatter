@@ -1,31 +1,23 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
+    import { apiFetch } from '$lib/api/client';
     import '$lib/css/auth.css';
 
     let mode: 'login' | 'signup' = 'login';
     let username = '';
     let password = '';
     let error = '';
-
-    const API_URL = 'http://localhost:8080/api/auth';
-
+    
     async function submit() {
         error = '';
 
         try {
-            const res = await fetch(`${API_URL}/${mode}`, {
+            const resp = await apiFetch(`/auth/${mode}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                credentials: 'include',
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ username, password }),
-                credentials: 'include'
             });
-
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.message || 'Error occured');
-            }
 
             goto('/');
         } catch (err: any) {

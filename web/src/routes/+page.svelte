@@ -1,8 +1,8 @@
 <script lang="ts">
     import type { Chat } from '$lib/models/chat';
     import type { Message } from '$lib/models/message';
+    import { apiFetch } from '$lib/api/client';
     import { onMount } from 'svelte';
-    import { getChats } from '$lib/api/chats';
     
     import '$lib/css/main.css';
     
@@ -23,7 +23,25 @@
     }
 
     async function refreshChats() {
-        chats = await getChats();
+        try {
+            const resp = await apiFetch('/chats', {
+                method: 'GET',
+                credentials: 'include'
+            });
+
+            chats = resp.chats.map((chat :any) => {
+                return {
+                    id: chat.id,
+                    type: chat.type as 'direct' | 'group',
+                    name: chat.name ?? null,
+                    lastMessage: chat.last_message ?? null,
+                    createdAt: chat.created_at
+                };
+            });
+        } catch (err: any) {
+            console.warn('Could not load chats from backend', err);
+            chats = [];
+        }        
     }
 
     function sendMessage() {
