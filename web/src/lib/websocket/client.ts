@@ -1,7 +1,8 @@
 import { wsStore } from "$lib/stores/websocket";
 import { appendMessage } from '$lib/stores/messages';
-import type { WsEvent } from "$lib/websocket/event"
+import type { WsEvent } from "$lib/websocket/event";
 import type { Message } from "$lib/models/message";
+import { WS_RECONNECT_DELAY } from '$lib/constants';
 
 const socketUrl = 'ws://localhost:8080/ws';
 
@@ -19,7 +20,7 @@ export function connect() {
     socket.onclose = () => {
         wsStore.update(s => ({ ...s, socket: null, status: 'disconnected' }));
         if (!isIntentionalClose) {
-            setTimeout(connect, 5000);
+            setTimeout(connect, WS_RECONNECT_DELAY);
         }
     };
 
@@ -28,14 +29,19 @@ export function connect() {
     };
 
     socket.onmessage = (event: MessageEvent) => {
-        const message = JSON.parse(event.data) as WsEvent;
-        handleEvent(message);
+        try {
+            const message = JSON.parse(event.data) as WsEvent;
+            handleEvent(message);
+        } catch (error) {
+            console.error('Failed to parse WebSocket message:', error);
+        }
     };
 }
 
 export function disconnect() {
     isIntentionalClose = true;
-    socket?.close;
+    socket?.close();
+    socket = null;
 }
 
 export function sendEvent(event: WsEvent) {
@@ -55,13 +61,16 @@ function handleEvent(event: WsEvent) {
                     fromMe: event.from_me ?? false,
                     id: event.message_id,
                     text: event.content ?? "",
-                    createdAt: event.date ?? new Date()
-                }
+                    createdAt: event.date instanceof Date 
+                        ? event.date 
+                        : event.date 
+                            ? new Date(event.date)
+                            : new Date()
+                };
                 appendMessage(event.chat_id, message);
             }
-            
             break;
         default:
-            console.warn('unknown event type:', (event as any).type);
+            console.warn('Unknown event type:', event.type);
     }
 }

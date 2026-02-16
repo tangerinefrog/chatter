@@ -1,11 +1,12 @@
 <script lang="ts">
     import type { Chat } from '$lib/models/chat';
-    import type { Message } from '$lib/models/message';
-    import { apiFetch } from '$lib/api/client';
+    import { getChats, getMessages, createChat } from '$lib/api/client';
     import { connect, disconnect, sendEvent } from '$lib/websocket/client';
     import { onMount, onDestroy } from 'svelte';
     import { setMessages, messagesStore } from '$lib/stores/messages';
     import { formatTimestamp as formatDate } from '$lib/utils/date';
+    import type { ApiError } from '$lib/api/client';
+    import { KEYBOARD_KEYS, MESSAGE_PAGE_SIZE } from '$lib/constants';
     
     import '$lib/css/main.css';
     
@@ -14,6 +15,9 @@
     let currentMessage = '';
     let isNewChatModalOpen = false;
     let username = '';
+    let isLoadingChats = false;
+    let isLoadingMessages = false;
+    let error: string | null = null;
 
     $: messages = currentChat ? $messagesStore[currentChat?.id] ?? [] : [];
 
@@ -27,47 +31,47 @@
     }
 
     async function refreshChats() {
+        isLoadingChats = true;
+        error = null;
+        
         try {
-            const resp = await apiFetch('/chats', {
-                method: 'GET'
-            });
-
-            chats = resp.chats.map((chat :any) => {
-                return {
-                    id: chat.id,
-                    type: chat.type as 'direct' | 'group',
-                    name: chat.name ?? null,
-                    lastMessage: chat.last_message ?? null,
-                    createdAt: chat.created_at
-                };
-            });
-        } catch (err: any) {
-            console.warn('Could not load chats from backend:', err);
+            const resp = await getChats();
+            chats = resp.chats.map((chat) => ({
+                id: chat.id,
+                type: chat.type as 'direct' | 'group',
+                name: chat.name ?? null,
+                lastMessage: chat.last_message ?? null,
+                createdAt: chat.created_at
+            }));
+        } catch (err) {
+            const apiError = err as ApiError;
+            error = apiError.message || 'Failed to load chats';
             chats = [];
+        } finally {
+            isLoadingChats = false;
         }
     }
 
     async function loadMessages(chatID: number, page: number) {
+        isLoadingMessages = true;
+        error = null;
+        
         try {
-            const resp = await apiFetch(`/chats/${chatID}/messages?page=${page}`, {
-                method: 'GET'
-            });
-
-            const msgs = resp.messages.map((message :any) => {
-                return {
-                    id: message.id,
-                    text: message.content,
-                    fromMe: message.from_me,
-                    userId: message.user_id,
-                    createdAt: message.created_at
-                };
-            });
-
-            console.log(msgs)
+            const resp = await getMessages(chatID, page);
+            const msgs = resp.messages.map((message) => ({
+                id: message.id,
+                text: message.content,
+                fromMe: message.from_me,
+                userId: message.user_id,
+                createdAt: new Date(message.created_at)
+            }));
 
             setMessages(chatID, msgs);
-        } catch (err: any) {
-            console.warn('Could not load messages from backend:', err);
+        } catch (err) {
+            const apiError = err as ApiError;
+            error = apiError.message || 'Failed to load messages';
+        } finally {
+            isLoadingMessages = false;
         }
     }
 
@@ -97,37 +101,42 @@
     }
 
     async function addChat() {
-        if (!username.trim()) {
+        const trimmedUsername = username.trim();
+        if (!trimmedUsername) {
+            error = 'Username is required';
             return;
         }
-        const req = {
-            is_direct: true,
-            participant_usernames: [username]
-        }
 
+        error = null;
+        
         try {
-            await apiFetch('/chats', {
-                method: 'POST',
-                credentials: 'include',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(req),
+            await createChat({
+                is_direct: true,
+                participant_usernames: [trimmedUsername]
             });
 
             await refreshChats();
-        } catch (err: any) {
-            console.warn('Could not create chat:', err);
+            closeModal();
+        } catch (err) {
+            const apiError = err as ApiError;
+            error = apiError.message || 'Failed to create chat';
         }
-
-        closeModal();
     }
 
     function handleKeydown(event: KeyboardEvent) {
-        if (event.key === 'Escape') {
+        if (event.key === KEYBOARD_KEYS.ESCAPE) {
             if (isNewChatModalOpen) {
                 closeModal();
             } else {
                 currentChat = null;
             }
+        }
+    }
+
+    function handleContactKeydown(event: KeyboardEvent, chat: Chat) {
+        if (event.key === KEYBOARD_KEYS.ENTER || event.key === KEYBOARD_KEYS.SPACE) {
+            event.preventDefault();
+            selectChat(chat);
         }
     }
 
@@ -155,15 +164,25 @@
         </div>
 
         <div class="contacts">
-            {#each chats as chat}
-                <div role="button" tabindex="0" class="contact {chat.id === currentChat?.id ? 'active' : ''}"
-                    on:click={() => selectChat(chat)}
-                    on:keydown={() => selectChat(chat)}                    
-                >
-                    <div class="contact-name">{chat.name}</div>
-                    <div class="contact-last">{chat.lastMessage}</div>
-                </div>
-            {/each}
+            {#if isLoadingChats}
+                <div class="loading">Loading chats...</div>
+            {:else if chats.length === 0}
+                <div class="empty-state">No chats yet. Create one to get started!</div>
+            {:else}
+                {#each chats as chat}
+                    <div 
+                        role="button" 
+                        tabindex="0" 
+                        class="contact {chat.id === currentChat?.id ? 'active' : ''}"
+                        on:click={() => selectChat(chat)}
+                        on:keydown={(e) => handleContactKeydown(e, chat)}
+                        aria-label="Chat with {chat.name || 'Unknown'}"
+                    >
+                        <div class="contact-name">{chat.name || 'Unknown'}</div>
+                        <div class="contact-last">{chat.lastMessage || 'No messages'}</div>
+                    </div>
+                {/each}
+            {/if}
         </div>
     </aside>
 
@@ -174,14 +193,22 @@
             </div>
 
             <div class="messages">
-                {#each messages as msg}
-                    <div class="message-row {msg.fromMe ? 'me' : 'them'}">
-                        <div class="bubble">
-                            <div class="message-text">{msg.text}</div>
-                            <div class="message-timestamp">{formatDate(msg.createdAt)}</div>
+                {#if isLoadingMessages}
+                    <div class="loading">Loading messages...</div>
+                {:else if messages.length === 0}
+                    <div class="empty-state">No messages yet. Start the conversation!</div>
+                {:else}
+                    {#each messages as msg}
+                        <div class="message-row {msg.fromMe ? 'me' : 'them'}">
+                            <div class="bubble">
+                                <div class="message-text">{msg.text}</div>
+                                <div class="message-timestamp" aria-label="Sent at {formatDate(msg.createdAt)}">
+                                    {formatDate(msg.createdAt)}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                {/each}
+                    {/each}
+                {/if}
             </div>
 
             <div class="chat-input">
@@ -189,9 +216,20 @@
                     type="text"
                     placeholder="Type a message..."
                     bind:value={currentMessage}
-                    on:keydown={(e) => e.key === 'Enter' && sendMessage()}
+                    on:keydown={(e) => {
+                        if (e.key === KEYBOARD_KEYS.ENTER && !e.shiftKey) {
+                            e.preventDefault();
+                            sendMessage();
+                        }
+                    }}
+                    aria-label="Message input"
+                    disabled={!currentChat}
                 />
-                <button on:click={sendMessage}>
+                <button 
+                    on:click={sendMessage}
+                    aria-label="Send message"
+                    disabled={!currentChat || !currentMessage.trim()}
+                >
                     Send
                 </button>
             </div>
@@ -203,22 +241,38 @@
     </main>
 
     {#if isNewChatModalOpen}
-    <div class="backdrop">
-        <div class="modal">
-        <h2>Add new chat</h2>
+        <div class="backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <div class="modal">
+                <h2 id="modal-title">Add new chat</h2>
 
-        <input
-            class="input"
-            type="text"
-            placeholder="Username"
-            bind:value={username}
-        />
+                {#if error}
+                    <div class="error" role="alert">{error}</div>
+                {/if}
 
-        <div class="actions">
-            <button class="button" on:click={addChat}>Add</button>
-            <button class="button button-secondary" on:click={closeModal}>Cancel</button>
+                <input
+                    class="input"
+                    type="text"
+                    placeholder="Username"
+                    bind:value={username}
+                    on:keydown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addChat();
+                        }
+                    }}
+                    aria-label="Username"
+                    autofocus
+                />
+
+                <div class="actions">
+                    <button class="button" on:click={addChat} disabled={!username.trim()}>
+                        Add
+                    </button>
+                    <button class="button button-secondary" on:click={closeModal}>
+                        Cancel
+                    </button>
+                </div>
+            </div>
         </div>
-        </div>
-    </div>
     {/if}
 </div>

@@ -38,3 +38,14 @@ h2 {
     background: none;
     color: var(--text-link);
 }
+
+.switch button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
