@@ -1,5 +1,7 @@
-import { wsStore } from "./store";
+import { wsStore } from "$lib/stores/websocket";
+import { appendMessage } from '$lib/stores/messages';
 import type { WsEvent } from "$lib/websocket/event"
+import type { Message } from "$lib/models/message";
 
 const socketUrl = 'ws://localhost:8080/ws';
 
@@ -48,6 +50,15 @@ export function sendEvent(event: WsEvent) {
 function handleEvent(event: WsEvent) {
     switch (event.type) {
         case 'new_message':
+            if (event.chat_id && event.message_id) {
+                const message: Message = {
+                    fromMe: event.from_me ?? false,
+                    id: event.message_id,
+                    text: event.content ?? "",
+                    createdAt: event.date?.toISOString() ?? ""
+                }
+                appendMessage(event.chat_id, message);
+            }
             
             break;
         default:

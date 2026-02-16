@@ -3,16 +3,18 @@
     import type { Message } from '$lib/models/message';
     import { apiFetch } from '$lib/api/client';
     import { connect, disconnect, sendEvent } from '$lib/websocket/client';
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
+    import { setMessages, messagesStore } from '$lib/stores/messages';
     
     import '$lib/css/main.css';
     
     let chats: Chat[] = [];
-    let messages: Message[] = [];
     let currentChat: Chat | null = null;
     let currentMessage = '';
     let isNewChatModalOpen = false;
     let username = '';
+
+    $: messages = currentChat ? $messagesStore[currentChat?.id] ?? [] : [];
 
     function selectChat(chat: Chat) {
         if (currentChat?.id === chat.id) {
@@ -50,7 +52,7 @@
                 method: 'GET'
             });
 
-            messages = resp.messages.map((message :any) => {
+            const msgs = resp.messages.map((message :any) => {
                 return {
                     id: message.id,
                     text: message.content,
@@ -59,6 +61,8 @@
                     createdAt: message.created_at
                 };
             });
+
+            setMessages(chatID, msgs);
         } catch (err: any) {
             console.warn('Could not load messages from backend:', err);
         }
@@ -127,6 +131,10 @@
     onMount(() => {
         connect();
         refreshChats();
+    });
+
+    onDestroy(() => {
+        disconnect();
     });
     
 </script>

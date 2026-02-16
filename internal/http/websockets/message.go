@@ -6,6 +6,7 @@ type Event struct {
 	ChatID    int32     `json:"chat_id,omitempty"`
 	SenderID  int32     `json:"sender_id,omitempty"`
 	MessageID int64     `json:"message_id,omitempty"`
+	FromMe    bool      `json:"from_me,omitempty"`
 }
 
 type EventType string

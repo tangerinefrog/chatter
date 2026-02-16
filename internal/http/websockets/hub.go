@@ -80,6 +80,7 @@ func (h *Hub) handleNewMessage(chatID int32, senderID int32, message string) {
 				SenderID:  senderID,
 				ChatID:    chatID,
 				MessageID: id,
+				FromMe:    u.ID == senderID,
 			}
 			h.sendMessageToClient(msg, client)
 		}
