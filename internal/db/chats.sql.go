@@ -99,13 +99,13 @@ SELECT
             where cu.chat_id = c.id
         ) t
     ) chat_users_json,
-    (
+    COALESCE((
         SELECT 
             m.content
         FROM messages m
         ORDER BY m.created_at DESC
         LIMIT 1
-    ) last_message
+    ), '')::TEXT last_message
 FROM chats c
 INNER JOIN chats_users cu ON cu.chat_id = c.id
 WHERE 
