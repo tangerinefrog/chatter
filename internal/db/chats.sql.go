@@ -137,6 +137,7 @@ SELECT
         SELECT 
             m.content
         FROM messages m
+        WHERE m.chat_id = c.id
         ORDER BY m.created_at DESC
         LIMIT 1
     ), '')::TEXT last_message
