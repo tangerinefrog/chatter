@@ -151,7 +151,7 @@ type ListUserChatsRow struct {
 	ID            int32
 	Type          string
 	Name          pgtype.Text
-	CreatedAt     pgtype.Timestamp
+	CreatedAt     pgtype.Timestamptz
 	ChatUsersJson []byte
 	LastMessage   string
 }
