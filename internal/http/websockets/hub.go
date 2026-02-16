@@ -66,7 +66,7 @@ func (h *Hub) handleNewMessage(chatID int32, senderID int32, message string) {
 		return
 	}
 
-	chatUsers, err := h.chatsRepo.ListUserChats(ctx, chatID)
+	chatUsers, err := h.chatsRepo.ListUsersForChat(ctx, chatID)
 	if err != nil {
 		h.logger.Error("Could not get chat participants from DB", zap.Int32("ChatID", chatID), zap.Error(err))
 		return

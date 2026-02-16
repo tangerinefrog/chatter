@@ -85,7 +85,7 @@ func (r *ChatsRepository) IsDirectChatExists(ctx context.Context, userID_1, user
 	return false, nil
 }
 
-func (r *ChatsRepository) ListUserChats(ctx context.Context, userID int32) ([]Chat, error) {
+func (r *ChatsRepository) ListChatsForUser(ctx context.Context, userID int32) ([]Chat, error) {
 	chatRows, err := r.q.ListUserChats(ctx, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -116,7 +116,7 @@ func (r *ChatsRepository) ListUserChats(ctx context.Context, userID int32) ([]Ch
 	return chats, nil
 }
 
-func (r *ChatsRepository) ListChatUsers(ctx context.Context, chatID int32) ([]*db.User, error) {
+func (r *ChatsRepository) ListUsersForChat(ctx context.Context, chatID int32) ([]*db.User, error) {
 	rows, err := r.q.ListChatUsers(ctx, chatID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

@@ -10,6 +10,7 @@ import (
 	"github.com/tangerinefrog/chatter/internal/auth/jwt"
 	"github.com/tangerinefrog/chatter/internal/chats"
 	"github.com/tangerinefrog/chatter/internal/http/server"
+	"github.com/tangerinefrog/chatter/internal/http/websockets"
 	"github.com/tangerinefrog/chatter/internal/messages"
 	"github.com/tangerinefrog/chatter/internal/users"
 	"go.uber.org/zap"
@@ -53,6 +54,9 @@ func main() {
 	chatsRepo := chats.NewRepository(pool)
 	messagesRepo := messages.NewRepository(pool)
 
-	srv := server.NewServer(addr, logger, usersRepo, chatsRepo, messagesRepo, jwtManager)
+	hub := websockets.NewHub(chatsRepo, messagesRepo, logger)
+	go hub.Run()
+
+	srv := server.NewServer(addr, logger, usersRepo, chatsRepo, messagesRepo, jwtManager, hub)
 	srv.Start()
 }

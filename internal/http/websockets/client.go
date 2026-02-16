@@ -15,8 +15,23 @@ type Client struct {
 	logger *zap.Logger
 }
 
-func (c *Client) ReadPump() {
-	defer c.Close()
+func ConnectClient(userID int32, conn *websocket.Conn, hub *Hub, logger *zap.Logger) {
+	c := &Client{
+		userID: userID,
+		conn:   conn,
+		send:   make(chan []byte),
+		hub:    hub,
+		logger: logger,
+	}
+
+	hub.register <- c
+
+	go c.readPump()
+	go c.writePump()
+}
+
+func (c *Client) readPump() {
+	defer c.close()
 
 	for {
 		_, data, err := c.conn.ReadMessage()
@@ -32,12 +47,15 @@ func (c *Client) ReadPump() {
 			break
 		}
 
+		c.logger.Info("Got WS message", zap.Any("Event", event))
+		event.SenderID = c.userID
+
 		c.hub.events <- event
 	}
 }
 
-func (c *Client) WritePump() {
-	defer c.Close()
+func (c *Client) writePump() {
+	defer c.close()
 	for data := range c.send {
 		err := c.conn.WriteMessage(websocket.TextMessage, data)
 		if err != nil {
@@ -46,7 +64,7 @@ func (c *Client) WritePump() {
 	}
 }
 
-func (c *Client) Close() {
+func (c *Client) close() {
 	c.hub.unregister <- c
 	c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 	c.conn.Close()

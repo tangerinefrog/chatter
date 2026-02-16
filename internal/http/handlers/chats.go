@@ -91,7 +91,7 @@ func (h *chatsHandler) ListUserChats(c *echo.Context) error {
 		return c.NoContent(http.StatusUnauthorized)
 	}
 
-	dbChats, err := h.chatsRepo.ListUserChats(c.Request().Context(), userID)
+	dbChats, err := h.chatsRepo.ListChatsForUser(c.Request().Context(), userID)
 	if err != nil {
 		h.logger.Error("Could not get chats for user", zap.Int32("UserID", userID), zap.Error(err))
 		return echo.NewHTTPError(http.StatusBadRequest, "could not get chats")

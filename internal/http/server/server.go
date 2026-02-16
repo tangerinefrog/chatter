@@ -10,6 +10,7 @@ import (
 	"github.com/tangerinefrog/chatter/internal/http/handlers"
 	mw "github.com/tangerinefrog/chatter/internal/http/middleware"
 	"github.com/tangerinefrog/chatter/internal/http/validator"
+	"github.com/tangerinefrog/chatter/internal/http/websockets"
 	"github.com/tangerinefrog/chatter/internal/messages"
 	"github.com/tangerinefrog/chatter/internal/users"
 	"go.uber.org/zap"
@@ -23,6 +24,7 @@ type Server struct {
 	chatsRepo    *chats.ChatsRepository
 	messagesRepo *messages.MessagesRepository
 	jwtManager   *jwt.JwtManager
+	hub          *websockets.Hub
 }
 
 func NewServer(
@@ -32,6 +34,7 @@ func NewServer(
 	chatsRepo *chats.ChatsRepository,
 	messagesRepo *messages.MessagesRepository,
 	jwtManager *jwt.JwtManager,
+	hub *websockets.Hub,
 ) *Server {
 	e := echo.New()
 
@@ -49,6 +52,7 @@ func NewServer(
 		chatsRepo:    chatsRepo,
 		messagesRepo: messagesRepo,
 		jwtManager:   jwtManager,
+		hub:          hub,
 	}
 
 	s.registerRoutes()
@@ -82,6 +86,11 @@ func (s *Server) registerRoutes() {
 	messages.Use(mw.Chat())
 	messages.GET("", messagesHandler.ListChatMessages)
 	messages.POST("", messagesHandler.CreateMessage)
+
+	websocketsHandler := handlers.NewWebsocketsHandler(s.hub, s.logger)
+	websocket := s.echo.Group("/ws")
+	websocket.Use(mw.Auth(s.jwtManager))
+	websocket.GET("", websocketsHandler.ServeWS)
 
 	s.echo.GET("/health", func(c *echo.Context) error {
 		return c.NoContent(http.StatusOK)
