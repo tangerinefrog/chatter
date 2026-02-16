@@ -49,10 +49,11 @@ func (h *messagesHandler) ListChatMessages(c *echo.Context) error {
 	messages := make([]dto.Message, len(dbMessages))
 	for i, m := range dbMessages {
 		messages[i] = dto.Message{
-			ID:      m.ID,
-			Content: m.Content,
-			FromMe:  m.UserID == userID,
-			UserID:  m.UserID,
+			ID:        m.ID,
+			Content:   m.Content,
+			FromMe:    m.UserID == userID,
+			UserID:    m.UserID,
+			CreatedAt: m.CreatedAt.UTC(),
 		}
 	}
 
