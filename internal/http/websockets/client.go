@@ -15,6 +15,7 @@ type Client struct {
 	hub    *Hub
 	logger *zap.Logger
 	mu     sync.Mutex
+	once   sync.Once
 }
 
 func ConnectClient(userID int32, conn *websocket.Conn, hub *Hub, logger *zap.Logger) {
@@ -69,9 +70,11 @@ func (c *Client) writePump() {
 }
 
 func (c *Client) close() {
-	c.hub.unregister <- c
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-	c.conn.Close()
+	c.once.Do(func() {
+		c.hub.unregister <- c
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+		c.conn.Close()
+	})
 }

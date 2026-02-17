@@ -3,6 +3,7 @@ package websockets
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"time"
 
 	"github.com/tangerinefrog/chatter/internal/chats"
@@ -11,6 +12,7 @@ import (
 )
 
 type Hub struct {
+	mu           sync.RWMutex
 	clients      map[int32]*Client
 	register     chan *Client
 	unregister   chan *Client
@@ -36,13 +38,17 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
+			h.mu.Lock()
 			h.clients[client.userID] = client
+			h.mu.Unlock()
 		case client := <-h.unregister:
+			h.mu.Lock()
 			_, ok := h.clients[client.userID]
 			if ok {
 				close(client.send)
 				delete(h.clients, client.userID)
 			}
+			h.mu.Unlock()
 		case e := <-h.events:
 			h.handleEvent(e)
 		}
@@ -71,6 +77,10 @@ func (h *Hub) handleNewMessage(chatID int32, senderID int32, message string) {
 		h.logger.Error("Could not get chat participants from DB", zap.Int32("ChatID", chatID), zap.Error(err))
 		return
 	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	for _, u := range chatUsers {
 		client, ok := h.clients[u.ID]
 		if ok {
@@ -94,5 +104,9 @@ func (h *Hub) sendMessageToClient(m Event, c *Client) {
 		return
 	}
 
-	c.send <- messageBytes
+	select {
+	case c.send <- messageBytes:
+	default:
+		h.logger.Debug("Could not send message to client, skip", zap.Int32("UserID", c.userID))
+	}
 }
