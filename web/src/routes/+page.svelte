@@ -24,17 +24,22 @@
     let isLoadingMore = false;
     let error: string | null = null;
     let messagesContainer: HTMLDivElement;
+    let messageInput: HTMLInputElement;
     let chatPages: Record<number, number> = {};
     let chatHasMore: Record<number, boolean> = {};
 
     $: messages = currentChat ? $messagesStore[currentChat?.id] ?? [] : [];
 
     function selectChat(chat: Chat) {
+        tick().then(() => {
+            messageInput.focus();
+        });
+
         if (currentChat?.id === chat.id) {
             return;
         }
 
-        currentChat = chat;   
+        currentChat = chat;
         chatPages[chat.id] = 1;
         chatHasMore[chat.id] = true;
         loadMessages(chat.id, 1);
@@ -329,6 +334,7 @@
                     type="text"
                     placeholder="Type a message..."
                     bind:value={currentMessage}
+                    bind:this={messageInput}
                     on:keydown={(e) => {
                         if (e.key === KEYBOARD_KEYS.ENTER && !e.shiftKey) {
                             e.preventDefault();
