@@ -2,6 +2,7 @@ package websockets
 
 import (
 	"encoding/json"
+	"sync"
 
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -13,6 +14,7 @@ type Client struct {
 	send   chan []byte
 	hub    *Hub
 	logger *zap.Logger
+	mu     sync.Mutex
 }
 
 func ConnectClient(userID int32, conn *websocket.Conn, hub *Hub, logger *zap.Logger) {
@@ -57,7 +59,9 @@ func (c *Client) readPump() {
 func (c *Client) writePump() {
 	defer c.close()
 	for data := range c.send {
+		c.mu.Lock()
 		err := c.conn.WriteMessage(websocket.TextMessage, data)
+		c.mu.Unlock()
 		if err != nil {
 			return
 		}
@@ -66,6 +70,8 @@ func (c *Client) writePump() {
 
 func (c *Client) close() {
 	c.hub.unregister <- c
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 	c.conn.Close()
 }
