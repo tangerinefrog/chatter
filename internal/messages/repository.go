@@ -14,7 +14,7 @@ type MessagesRepository struct {
 	q *db.Queries
 }
 
-const PageSize int32 = 100
+const PageSize int32 = 20
 
 func NewRepository(pool *pgxpool.Pool) *MessagesRepository {
 	return &MessagesRepository{

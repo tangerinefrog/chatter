@@ -11,6 +11,9 @@
     
     import '$lib/css/main.css';
     
+    const MESSAGES_PAGE_SIZE = 20;
+    const MESSAGES_LOAD_THRESHOLD = 15;    
+    
     let chats: Chat[] = [];
     let currentChat: Chat | null = null;
     let currentMessage = '';
@@ -18,8 +21,11 @@
     let username = '';
     let isLoadingChats = false;
     let isLoadingMessages = false;
+    let isLoadingMore = false;
     let error: string | null = null;
     let messagesContainer: HTMLDivElement;
+    let chatPages: Record<number, number> = {};
+    let chatHasMore: Record<number, boolean> = {};
 
     $: messages = currentChat ? $messagesStore[currentChat?.id] ?? [] : [];
 
@@ -29,6 +35,8 @@
         }
 
         currentChat = chat;   
+        chatPages[chat.id] = 1;
+        chatHasMore[chat.id] = true;
         loadMessages(chat.id, 1);
     }
 
@@ -55,10 +63,16 @@
         }
     }
 
-    async function loadMessages(chatID: number, page: number) {
-        isLoadingMessages = true;
+    async function loadMessages(chatID: number, page: number, prepend?: boolean) {
+        if (!prepend) {
+            isLoadingMessages = true;
+        }
+
         error = null;
         
+        const shouldPreserveScroll = prepend && currentChat?.id === chatID && !!messagesContainer;
+        const previousScrollHeight = shouldPreserveScroll ? messagesContainer.scrollHeight : 0;
+
         try {
             const resp = await getMessages(chatID, page);
             const msgs = resp.messages.map((message) => ({
@@ -69,29 +83,45 @@
                 createdAt: new Date(message.created_at)
             }));
 
-            setMessages(chatID, msgs);
-            
-            if (msgs.length > 0) {
-                const lastMsg = msgs[msgs.length - 1];
-                const chatIndex = chats.findIndex(c => c.id === chatID);
-                if (chatIndex !== -1) {
-                    chats = chats.map((chat, idx) => 
-                        idx === chatIndex 
-                            ? { ...chat, lastMessageDate: lastMsg.createdAt }
-                            : chat
-                    );
-                    if (currentChat?.id === chatID) {
-                        currentChat = { ...currentChat, lastMessageDate: lastMsg.createdAt };
+            chatPages[chatID] = page;
+            chatHasMore[chatID] = msgs.length === MESSAGES_PAGE_SIZE;
+
+            if (prepend && currentChat?.id === chatID) {
+                const existing = messages;
+                setMessages(chatID, [...msgs, ...existing]);
+
+                await tick();
+                if (messagesContainer && shouldPreserveScroll) {
+                    const newScrollHeight = messagesContainer.scrollHeight;
+                    messagesContainer.scrollTop = newScrollHeight - previousScrollHeight;
+                }
+            } else {
+                setMessages(chatID, msgs);
+
+                if (msgs.length > 0) {
+                    const lastMsg = msgs[msgs.length - 1];
+                    const chatIndex = chats.findIndex(c => c.id === chatID);
+                    if (chatIndex !== -1) {
+                        chats = chats.map((chat, idx) => 
+                            idx === chatIndex 
+                                ? { ...chat, lastMessageDate: lastMsg.createdAt }
+                                : chat
+                        );
+                        if (currentChat?.id === chatID) {
+                            currentChat = { ...currentChat, lastMessageDate: lastMsg.createdAt };
+                        }
                     }
                 }
+
+                await scrollToBottom();
             }
-            
-            await scrollToBottom();
         } catch (err) {
             const apiError = err as ApiError;
             error = apiError.message || 'Failed to load messages';
         } finally {
-            isLoadingMessages = false;
+            if (!prepend) {
+                isLoadingMessages = false;
+            }
         }
     }
 
@@ -109,6 +139,27 @@
         });
 
         currentMessage = '';
+    }
+
+    async function handleMessagesScroll() {
+        if (!currentChat || !messagesContainer || isLoadingMore || isLoadingMessages) {
+            return;
+        }
+
+        const currentChatId = currentChat.id;
+        if (!chatHasMore[currentChatId]) {
+            return;
+        }
+
+        if (messagesContainer.scrollTop <= MESSAGES_LOAD_THRESHOLD) {
+            const nextPage = (chatPages[currentChatId] ?? 1) + 1;
+            isLoadingMore = true;
+            try {
+                await loadMessages(currentChatId, nextPage, true);
+            } finally {
+                isLoadingMore = false;
+            }
+        }
     }
 
     async function scrollToBottom() {
@@ -254,7 +305,7 @@
                 {currentChat.name}
             </div>
 
-            <div class="messages" bind:this={messagesContainer}>
+            <div class="messages" bind:this={messagesContainer} on:scroll={handleMessagesScroll}>
                 {#if isLoadingMessages}
                     <div class="loading">Loading messages...</div>
                 {:else if messages.length === 0}
