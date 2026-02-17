@@ -51,7 +51,7 @@
                 type: chat.type as 'direct' | 'group',
                 name: chat.name ?? null,
                 lastMessage: chat.last_message ?? null,
-                lastMessageDate: new Date(chat.last_message_date),
+                lastMessageDate: chat.last_message_date ? new Date(chat.last_message_date) : null,
                 createdAt: chat.created_at
             }));
         } catch (err) {

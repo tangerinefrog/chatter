@@ -109,6 +109,10 @@ func (r *ChatsRepository) ListChatsForUser(ctx context.Context, userID int32) ([
 			CreatedAt time.Time `json:"created_at"`
 		}
 
+		if len(c.LastMessageJson) == 0 {
+			c.LastMessageJson = []byte("{}")
+		}
+		
 		err = json.Unmarshal(c.LastMessageJson, &lastMessage)
 		if err != nil {
 			return nil, err

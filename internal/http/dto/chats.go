@@ -22,7 +22,7 @@ type Chat struct {
 	Name            string            `json:"name"`
 	Participants    []ChatParticipant `json:"participants"`
 	LastMessage     string            `json:"last_message"`
-	LastMessageDate time.Time         `json:"last_message_date"`
+	LastMessageDate *time.Time         `json:"last_message_date"`
 }
 
 type ChatParticipant struct {

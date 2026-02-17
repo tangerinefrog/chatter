@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/tangerinefrog/chatter/internal/chats"
@@ -112,13 +113,19 @@ func (h *chatsHandler) ListUserChats(c *echo.Context) error {
 			}
 		}
 
+		lastMessageDate := &c.LastMessageDate
+		epoch := time.Time{}
+		if (*lastMessageDate).Equal(epoch) {
+			lastMessageDate = nil
+		}
+
 		chats[i] = dto.Chat{
 			ID:              c.ID,
 			Type:            c.Type,
 			Name:            chatName,
 			Participants:    participants,
 			LastMessage:     c.LastMessage,
-			LastMessageDate: c.LastMessageDate,
+			LastMessageDate: lastMessageDate,
 		}
 	}
 
