@@ -52,11 +52,10 @@ func (c *Client) readPump() {
 		var event Event
 		err = json.Unmarshal(data, &event)
 		if err != nil {
-			c.logger.Error("Could not deserialize WS message", zap.String("Event", string(data)), zap.Int32("UserID", c.userID), zap.Error(err))
+			c.logger.Error("Could not deserialize WS message", zap.Int32("UserID", c.userID), zap.Error(err))
 			break
 		}
 
-		c.logger.Info("Got WS message", zap.Any("Event", event))
 		event.SenderID = c.userID
 
 		c.hub.events <- event
