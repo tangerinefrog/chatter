@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"os"
 
@@ -70,11 +71,17 @@ func NewServer(
 	return &s
 }
 
-func (s *Server) Start() {
-	err := s.echo.Start(s.addr)
-	if err != nil {
-		s.logger.Fatal("Error during server start", zap.Error(err))
+func (s *Server) Start(ctx context.Context) error {
+	sc := echo.StartConfig{
+		Address: s.addr,
 	}
+
+	err := sc.Start(ctx, s.echo)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *Server) registerRoutes() {
