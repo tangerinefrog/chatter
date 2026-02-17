@@ -1,10 +1,9 @@
-import { wsStore } from "$lib/stores/websocket";
 import { appendMessage } from '$lib/stores/messages';
 import type { WsEvent } from "$lib/websocket/event";
 import type { Message } from "$lib/models/message";
 import { WS_RECONNECT_DELAY } from '$lib/constants';
 
-const socketUrl = 'ws://localhost:8080/ws';
+const socketUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
 
 let socket: WebSocket | null = null;
 let isIntentionalClose = false;
@@ -15,22 +14,21 @@ export function setOnNewMessageCallback(callback: (chatId: number, message: Mess
 }
 
 export function connect() {
-    wsStore.update(s => ({ ...s, status: 'connecting' }));
-    
-    socket = new WebSocket(socketUrl);
-    socket.onopen = () => {
-        wsStore.update(s => ({ ...s, status: 'connected' }));
-    };
+    if (socket?.readyState === WebSocket.CONNECTING || socket?.readyState === WebSocket.OPEN) {
+        return;
+    }
 
-    socket.onclose = () => {
-        wsStore.update(s => ({ ...s, socket: null, status: 'disconnected' }));
+    socket = new WebSocket(socketUrl);
+    socket.onopen = () => { };
+
+    socket.onclose = (event) => {
         if (!isIntentionalClose) {
             setTimeout(connect, WS_RECONNECT_DELAY);
         }
     };
 
-    socket.onerror = () => {
-        socket?.close();
+    socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
     };
 
     socket.onmessage = (event: MessageEvent) => {
@@ -45,8 +43,10 @@ export function connect() {
 
 export function disconnect() {
     isIntentionalClose = true;
-    socket?.close();
-    socket = null;
+    if (socket) {
+        socket.close();
+        socket = null;
+    }
 }
 
 export function sendEvent(event: WsEvent) {

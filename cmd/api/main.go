@@ -45,8 +45,6 @@ func run(logger *zap.Logger) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	jwtManager := jwt.NewJwtManager(cfg.jwtSecret, 1*time.Hour)
-
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
@@ -63,6 +61,7 @@ func run(logger *zap.Logger) error {
 	hub := websockets.NewHub(chatsRepo, messagesRepo, logger)
 	go hub.Run()
 
+	jwtManager := jwt.NewJwtManager(cfg.jwtSecret, 1*time.Hour)
 	srv := server.NewServer(cfg.serverAddr, logger, usersRepo, chatsRepo, messagesRepo, jwtManager, hub)
 
 	err = srv.Start(ctx)
@@ -71,6 +70,7 @@ func run(logger *zap.Logger) error {
 	}
 
 	logger.Info("Shutting down server...")
+	
 
 	return nil
 }

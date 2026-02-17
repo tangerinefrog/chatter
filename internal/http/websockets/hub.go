@@ -55,6 +55,21 @@ func (h *Hub) Run() {
 	}
 }
 
+func (h *Hub) Shutdown() {
+	clients := make([]*Client, 0)
+	h.mu.Lock()
+	for _, client := range h.clients {
+		clients = append(clients, client)
+	}
+	h.mu.Unlock()
+	h.logger.Info("WS Clients", zap.Any("Clients", clients))
+
+	for _, client := range clients {
+		h.logger.Info("Closing WS client", zap.Int32("UserID", client.userID))
+		client.close()
+	}
+}
+
 func (h *Hub) handleEvent(e Event) {
 	switch e.Type {
 	case EventSendMessage:

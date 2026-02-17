@@ -39,7 +39,13 @@ func (c *Client) readPump() {
 	for {
 		_, data, err := c.conn.ReadMessage()
 		if err != nil {
-			c.logger.Error("Could not read WS message", zap.Int32("UserID", c.userID), zap.Error(err))
+			if websocket.IsUnexpectedCloseError(
+				err,
+				websocket.CloseGoingAway,
+				websocket.CloseNormalClosure,
+			) {
+				c.logger.Error("Could not read WS message", zap.Int32("UserID", c.userID), zap.Error(err))
+			}
 			break
 		}
 
