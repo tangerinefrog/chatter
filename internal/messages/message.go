@@ -8,4 +8,5 @@ type Message struct {
 	ChatID    int32
 	Content   string
 	CreatedAt time.Time
+	ReadAt    *time.Time
 }

@@ -87,7 +87,7 @@ func (r *ChatsRepository) IsDirectChatExists(ctx context.Context, userID_1, user
 }
 
 func (r *ChatsRepository) ListChatsForUser(ctx context.Context, userID int32) ([]Chat, error) {
-	chatRows, err := r.q.ListUserChats(ctx, userID)
+	chatRows, err := r.q.ListUserChats(ctx, pgtype.Int4{Int32: userID, Valid: true})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -112,20 +112,21 @@ func (r *ChatsRepository) ListChatsForUser(ctx context.Context, userID int32) ([
 		if len(c.LastMessageJson) == 0 {
 			c.LastMessageJson = []byte("{}")
 		}
-		
+
 		err = json.Unmarshal(c.LastMessageJson, &lastMessage)
 		if err != nil {
 			return nil, err
 		}
 
 		chats[i] = Chat{
-			ID:              c.ID,
-			Type:            c.Type,
-			Name:            c.Name.String,
-			LastMessage:     lastMessage.Content,
-			LastMessageDate: lastMessage.CreatedAt.UTC(),
-			Participants:    participants,
-			CreatedAt:       c.CreatedAt.Time,
+			ID:                  c.ID,
+			Type:                c.Type,
+			Name:                c.Name.String,
+			LastMessage:         lastMessage.Content,
+			LastMessageDate:     lastMessage.CreatedAt.UTC(),
+			Participants:        participants,
+			CreatedAt:           c.CreatedAt.Time,
+			UnreadMessagesCount: int32(c.UnreadMessagesCount),
 		}
 	}
 

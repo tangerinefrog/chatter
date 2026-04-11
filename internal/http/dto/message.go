@@ -6,6 +6,10 @@ type CreateMessageRequest struct {
 	Content string `json:"content" validate:"required,min=1"`
 }
 
+type ReadMessageRequest struct {
+	MessageID int64 `json:"message_id" validate:"required"`
+}
+
 type CreateMessageResponse struct {
 	MessageID int64     `json:"message_id"`
 	CreatedAt time.Time `json:"created_at"`
@@ -21,4 +25,5 @@ type Message struct {
 	FromMe    bool      `json:"from_me"`
 	UserID    int32     `json:"user_id"`
 	CreatedAt time.Time `json:"created_at"`
+	ReadAt    *time.Time `json:"read_at"`
 }

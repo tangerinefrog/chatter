@@ -33,7 +33,7 @@ SELECT
                 u.username
             FROM chats_users cu
             INNER JOIN users u on cu.user_id = u.id
-            where cu.chat_id = c.id
+            WHERE cu.chat_id = c.id
         ) t
     ) chat_users_json,
     (
@@ -47,7 +47,17 @@ SELECT
             ORDER BY m.created_at DESC
             LIMIT 1
         ) t
-    ) last_message_json
+    ) last_message_json,
+    (
+        SELECT COUNT(*)
+        FROM messages m
+        WHERE 
+        m.chat_id = c.id
+        AND
+        m.read_at IS NULL
+        AND
+        m.user_id != $1
+    ) unread_messages_count
 FROM chats c
 INNER JOIN chats_users cu ON cu.chat_id = c.id
 WHERE 

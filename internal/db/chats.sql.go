@@ -130,7 +130,7 @@ SELECT
                 u.username
             FROM chats_users cu
             INNER JOIN users u on cu.user_id = u.id
-            where cu.chat_id = c.id
+            WHERE cu.chat_id = c.id
         ) t
     ) chat_users_json,
     (
@@ -144,7 +144,17 @@ SELECT
             ORDER BY m.created_at DESC
             LIMIT 1
         ) t
-    ) last_message_json
+    ) last_message_json,
+    (
+        SELECT COUNT(*)
+        FROM messages m
+        WHERE 
+        m.chat_id = c.id
+        AND
+        m.read_at IS NULL
+        AND
+        m.user_id != $1
+    ) unread_messages_count
 FROM chats c
 INNER JOIN chats_users cu ON cu.chat_id = c.id
 WHERE 
@@ -152,15 +162,16 @@ WHERE
 `
 
 type ListUserChatsRow struct {
-	ID              int32
-	Type            string
-	Name            pgtype.Text
-	CreatedAt       pgtype.Timestamptz
-	ChatUsersJson   []byte
-	LastMessageJson []byte
+	ID                  int32
+	Type                string
+	Name                pgtype.Text
+	CreatedAt           pgtype.Timestamptz
+	ChatUsersJson       []byte
+	LastMessageJson     []byte
+	UnreadMessagesCount int64
 }
 
-func (q *Queries) ListUserChats(ctx context.Context, userID int32) ([]ListUserChatsRow, error) {
+func (q *Queries) ListUserChats(ctx context.Context, userID pgtype.Int4) ([]ListUserChatsRow, error) {
 	rows, err := q.db.Query(ctx, listUserChats, userID)
 	if err != nil {
 		return nil, err
@@ -176,6 +187,7 @@ func (q *Queries) ListUserChats(ctx context.Context, userID int32) ([]ListUserCh
 			&i.CreatedAt,
 			&i.ChatUsersJson,
 			&i.LastMessageJson,
+			&i.UnreadMessagesCount,
 		); err != nil {
 			return nil, err
 		}

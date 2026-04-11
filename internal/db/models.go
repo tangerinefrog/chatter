@@ -28,6 +28,7 @@ type Message struct {
 	UserID    pgtype.Int4
 	Content   string
 	CreatedAt pgtype.Timestamptz
+	ReadAt    pgtype.Timestamptz
 }
 
 type User struct {

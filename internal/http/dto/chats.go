@@ -17,12 +17,13 @@ type ListChatsForUserResponse struct {
 }
 
 type Chat struct {
-	ID              int32             `json:"id"`
-	Type            string            `json:"type"`
-	Name            string            `json:"name"`
-	Participants    []ChatParticipant `json:"participants"`
-	LastMessage     string            `json:"last_message"`
-	LastMessageDate *time.Time         `json:"last_message_date"`
+	ID                  int32             `json:"id"`
+	Type                string            `json:"type"`
+	Name                string            `json:"name"`
+	Participants        []ChatParticipant `json:"participants"`
+	LastMessage         string            `json:"last_message"`
+	LastMessageDate     *time.Time        `json:"last_message_date"`
+	UnreadMessagesCount int32             `json:"unread_messages_count"`
 }
 
 type ChatParticipant struct {

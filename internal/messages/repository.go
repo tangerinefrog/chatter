@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -71,14 +72,41 @@ func (r *MessagesRepository) ListChatMessages(
 			userID = m.UserID.Int32
 		}
 
+		var readAt *time.Time
+		if !m.ReadAt.Valid {
+			readAt = nil
+		} else {
+			readAt = &m.ReadAt.Time
+		}
+
 		result[i] = Message{
 			ID:        m.ID,
 			UserID:    userID,
 			ChatID:    chatID,
 			Content:   m.Content,
 			CreatedAt: m.CreatedAt.Time,
+			ReadAt:    readAt,
 		}
 	}
 
 	return result, nil
+}
+
+func (r *MessagesRepository) MarkMessagesAsRead(
+	ctx context.Context,
+	messageID int64,
+	chatID int32,
+	userID int32,
+) error {
+	err := r.q.MarkMessagesAsRead(ctx, db.MarkMessagesAsReadParams{
+		ID:     messageID,
+		ChatID: chatID,
+		UserID: pgtype.Int4{Int32: userID, Valid: true},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

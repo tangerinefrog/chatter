@@ -102,6 +102,7 @@ func (s *Server) registerRoutes() {
 	messages := chats.Group("/:chatID/messages")
 	messages.Use(mw.Chat())
 	messages.GET("", messagesHandler.ListChatMessages)
+	messages.POST("/read", messagesHandler.MarkMessagesAsRead)
 
 	websocketsHandler := handlers.NewWebsocketsHandler(s.hub, s.logger)
 	websocket := s.echo.Group("/ws")

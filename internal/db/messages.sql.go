@@ -43,7 +43,8 @@ SELECT
     m.id,
     m.user_id,
     m.content,
-    m.created_at
+    m.created_at,
+    m.read_at
 FROM messages m
 WHERE m.chat_id = $1
 ORDER BY m.created_at DESC
@@ -61,6 +62,7 @@ type ListTopNMessagesRow struct {
 	UserID    pgtype.Int4
 	Content   string
 	CreatedAt pgtype.Timestamptz
+	ReadAt    pgtype.Timestamptz
 }
 
 func (q *Queries) ListTopNMessages(ctx context.Context, arg ListTopNMessagesParams) ([]ListTopNMessagesRow, error) {
@@ -77,6 +79,7 @@ func (q *Queries) ListTopNMessages(ctx context.Context, arg ListTopNMessagesPara
 			&i.UserID,
 			&i.Content,
 			&i.CreatedAt,
+			&i.ReadAt,
 		); err != nil {
 			return nil, err
 		}
@@ -86,4 +89,29 @@ func (q *Queries) ListTopNMessages(ctx context.Context, arg ListTopNMessagesPara
 		return nil, err
 	}
 	return items, nil
+}
+
+const markMessagesAsRead = `-- name: MarkMessagesAsRead :exec
+UPDATE messages
+SET 
+    read_at = now()
+WHERE 
+    id >= $1
+    AND
+    chat_id = $2
+    AND 
+    user_id = $3
+    AND 
+    read_at IS NULL
+`
+
+type MarkMessagesAsReadParams struct {
+	ID     int64
+	ChatID int32
+	UserID pgtype.Int4
+}
+
+func (q *Queries) MarkMessagesAsRead(ctx context.Context, arg MarkMessagesAsReadParams) error {
+	_, err := q.db.Exec(ctx, markMessagesAsRead, arg.ID, arg.ChatID, arg.UserID)
+	return err
 }
