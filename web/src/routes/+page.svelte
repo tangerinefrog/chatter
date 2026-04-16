@@ -3,7 +3,7 @@
     import type { Message } from '$lib/models/message';
     import { getChats, getMessages, createChat } from '$lib/api/client';
     import { connect, disconnect, sendEvent, setOnNewMessageCallback } from '$lib/websocket/client';
-    import { onMount, onDestroy, tick } from 'svelte';
+    import { onMount, tick } from 'svelte';
     import { setMessages, messagesStore } from '$lib/stores/messages';
     import { formatTimestamp } from '$lib/utils/date';
     import type { ApiError } from '$lib/api/client';
@@ -30,7 +30,7 @@
 
     $: messages = currentChat ? $messagesStore[currentChat?.id] ?? [] : [];
 
-    function selectChat(chat: Chat) {
+    async function selectChat(chat: Chat) {
         tick().then(() => {
             messageInput.focus();
         });
@@ -42,7 +42,9 @@
         currentChat = chat;
         chatPages[chat.id] = 1;
         chatHasMore[chat.id] = true;
-        loadMessages(chat.id, 1);
+
+        await loadMessages(chat.id, 1);
+        await markVisibleMessagesAsRead();
     }
 
     async function refreshChats() {
@@ -57,7 +59,8 @@
                 name: chat.name ?? null,
                 lastMessage: chat.last_message ?? null,
                 lastMessageDate: chat.last_message_date ? new Date(chat.last_message_date) : null,
-                createdAt: chat.created_at
+                createdAt: chat.created_at,
+                unreadMessagesCount: chat.unread_messages_count,
             }));
         } catch (err) {
             const apiError = err as ApiError;
@@ -85,7 +88,8 @@
                 text: message.content,
                 fromMe: message.from_me,
                 userId: message.user_id,
-                createdAt: new Date(message.created_at)
+                createdAt: new Date(message.created_at),
+                readAt: message.read_at ? new Date(message.read_at) : null
             }));
 
             chatPages[chatID] = page;
@@ -130,6 +134,46 @@
         }
     }
 
+    function isRowVisible(row: HTMLElement): boolean {
+        if (!messagesContainer) {
+            return false;
+        }
+
+        const containerRect = messagesContainer.getBoundingClientRect();
+        const rect = row.getBoundingClientRect();
+
+        return rect.bottom > containerRect.top && rect.top < containerRect.bottom;
+    }
+
+    async function markVisibleMessagesAsRead() {
+        if (!currentChat || !messagesContainer || messages.length === 0) {
+            return;
+        }
+
+        if (document.visibilityState !== 'visible' || !document.hasFocus()) {
+            return;
+        }
+
+        const unreadRows = Array.from(
+            messagesContainer.querySelectorAll('.message-row:not(.me)[data-read="false"]')
+        ) as HTMLElement[];
+
+        const visibleUnread = unreadRows.filter(isRowVisible);
+
+        if (visibleUnread.length === 0) {
+            return;
+        }
+
+        const lastVisible = visibleUnread.reduce((prev, row) => {
+            return Number(row.dataset.messageId) > Number(prev.dataset.messageId) ? row : prev;
+        });
+
+        const messageID = Number(lastVisible.dataset.messageId);
+        if (!Number.isNaN(messageID)) {
+            await markAsRead(messageID);
+        }
+    }
+
     async function sendMessage() {
         const messageClean = currentMessage.trim();
 
@@ -153,6 +197,7 @@
 
         const currentChatId = currentChat.id;
         if (!chatHasMore[currentChatId]) {
+            await markVisibleMessagesAsRead();
             return;
         }
 
@@ -165,6 +210,8 @@
                 isLoadingMore = false;
             }
         }
+
+        await markVisibleMessagesAsRead();
     }
 
     async function scrollToBottom() {
@@ -252,14 +299,40 @@
         }
     }
 
+    async function markAsRead(messageID: number) {
+        if (!currentChat?.id) {
+            return;
+        }
+
+        const chatId = currentChat.id;
+        chats = chats.map((chat) =>
+            chat.id === chatId ? { ...chat, unreadMessagesCount: 0 } : chat
+        );
+        currentChat = currentChat.id === chatId ? { ...currentChat, unreadMessagesCount: 0 } : currentChat;
+        sendEvent({
+            type: 'read_message',
+            chat_id: chatId,
+            message_id: messageID
+        });
+    }
+
+    function handleVisibilityChange() {
+        if (document.visibilityState === 'visible') {
+            markVisibleMessagesAsRead();
+        }
+    }
+
     onMount(() => {
         connect();
         refreshChats();
         setOnNewMessageCallback(handleNewMessage);
-    });
 
-    onDestroy(() => {
-        disconnect();
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            disconnect();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     });
     
 </script>
@@ -293,7 +366,9 @@
                     >
                         <div class="contact-header">
                             <div class="contact-name">{chat.name || 'Unknown'}</div>
-                            {#if chat.lastMessageDate}
+                            {#if chat.unreadMessagesCount && chat.unreadMessagesCount > 0}
+                                <div class="unread-badge">{chat.unreadMessagesCount}</div>
+                            {:else if chat.lastMessageDate}
                                 <div class="contact-date">{formatTimestamp(chat.lastMessageDate)}</div>
                             {/if}
                         </div>
@@ -317,14 +392,25 @@
                     <div class="empty-state">No messages yet. Start the conversation!</div>
                 {:else}
                     {#each messages as msg}
-                        <div class="message-row {msg.fromMe ? 'me' : 'them'}">
-                            <div class="bubble">
-                                <div class="message-text">{msg.text}</div>
+                        <div class="message-row {msg.fromMe ? 'me' : 'them'}" data-message-id={msg.id} data-read={msg.readAt ? 'true' : 'false'}>
+                        <div class="bubble">
+                            <div class="message-text">{msg.text}</div>
+                            <div class="message-footer">
                                 <div class="message-timestamp" aria-label="Sent at {formatTimestamp(msg.createdAt)}">
                                     {formatTimestamp(msg.createdAt)}
                                 </div>
-                            </div>
-                        </div>
+                                {#if msg.fromMe}
+                                     <span class="message-status" aria-label="{msg.readAt ? 'Read' : 'Sent'}">
+                                         {#if msg.readAt}
+                                             ✓✓
+                                         {:else}
+                                             ✓
+                                         {/if}
+                                     </span>
+                                 {/if}
+                             </div>
+                         </div>
+                     </div>
                     {/each}
                 {/if}
             </div>
