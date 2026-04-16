@@ -28,10 +28,10 @@ UPDATE messages
 SET 
     read_at = now()
 WHERE 
-    id >= $1
+    id <= $1
     AND
     chat_id = $2
     AND 
-    user_id = $3
+    user_id != $3
     AND 
     read_at IS NULL;

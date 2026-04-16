@@ -74,6 +74,8 @@ func (h *Hub) handleEvent(e Event) {
 	switch e.Type {
 	case EventSendMessage:
 		h.handleNewMessage(e.ChatID, e.SenderID, e.Content)
+	case EventReadMessage:
+		h.handleReadMessage(e.ChatID, e.SenderID, e.MessageID)
 	}
 }
 
@@ -123,5 +125,41 @@ func (h *Hub) sendMessageToClient(m Event, c *Client) {
 	case c.send <- messageBytes:
 	default:
 		h.logger.Debug("Could not send message to client, skip", zap.Int32("UserID", c.userID))
+	}
+}
+
+func (h *Hub) handleReadMessage(chatID int32, senderID int32, messageID int64) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	if err := h.messagesRepo.MarkMessagesAsRead(ctx, messageID, chatID, senderID); err != nil {
+		h.logger.Error("Could not mark messages as read in DB", zap.Int32("ChatID", chatID), zap.Int64("MessageID", messageID), zap.Int32("UserID", senderID), zap.Error(err))
+	}
+
+	chatUsers, err := h.chatsRepo.ListUsersForChat(ctx, chatID)
+	if err != nil {
+		h.logger.Error("Could not get chat participants from DB", zap.Int32("ChatID", chatID), zap.Error(err))
+		return
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	for _, u := range chatUsers {
+		if u.ID == senderID {
+			continue
+		}
+		
+		client, ok := h.clients[u.ID]
+		if ok {
+			msg := Event{
+				Type:      EventReadMessage,
+				SenderID:  senderID,
+				ChatID:    chatID,
+				MessageID: messageID,
+				ReadAt:    time.Now().UTC(),
+			}
+			h.sendMessageToClient(msg, client)
+		}
 	}
 }
