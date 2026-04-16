@@ -5,6 +5,7 @@ export interface ApiChat {
     last_message: string | null;
     last_message_date: string | null;
     created_at: string;
+    unread_messages_count: number | null;
 }
 
 export interface ApiMessage {
@@ -13,6 +14,7 @@ export interface ApiMessage {
     from_me: boolean;
     user_id: number;
     created_at: string;
+    read_at: string | null;
 }
 
 export interface ChatsResponse {

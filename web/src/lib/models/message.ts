@@ -3,4 +3,5 @@ export type Message = {
     fromMe: boolean;
     text: string;
     createdAt: Date;
+    readAt: Date | null;
 };

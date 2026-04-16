@@ -1,4 +1,4 @@
-import { appendMessage } from '$lib/stores/messages';
+import { appendMessage, markSentMessagesAsRead } from '$lib/stores/messages';
 import type { WsEvent } from "$lib/websocket/event";
 import type { Message } from "$lib/models/message";
 import { WS_RECONNECT_DELAY } from '$lib/constants';
@@ -70,13 +70,20 @@ function handleEvent(event: WsEvent) {
                         ? event.date 
                         : event.date 
                             ? new Date(event.date)
-                            : new Date()
+                            : new Date(),
+                    readAt: null,
                 };
                 appendMessage(event.chat_id, message);
                 
                 if (onNewMessageCallback) {
                     onNewMessageCallback(event.chat_id, message);
                 }
+            }
+            break;
+        case 'read_message':
+            if (event.chat_id && event.message_id) {
+                const readAt = event.read_at ? new Date(event.read_at) : new Date();
+                markSentMessagesAsRead(event.chat_id, event.message_id, readAt);
             }
             break;
         default:

@@ -5,4 +5,5 @@ export type Chat = {
     lastMessage: string | null
     lastMessageDate: Date | null
     createdAt: string
+    unreadMessagesCount: number | null
 };

@@ -20,3 +20,19 @@ export function setMessages(chatId: number, messages: Message[]): void {
         [chatId]: messages
     }));
 }
+
+export function markSentMessagesAsRead(chatId: number, lastMessageId: number, readAt: Date): void {
+    messagesStore.update(store => {
+        const msgs = store[chatId];
+        if (!msgs) return store;
+
+        return {
+            ...store,
+            [chatId]: msgs.map(msg =>
+                msg.id <= lastMessageId && msg.fromMe && !msg.readAt
+                    ? { ...msg, readAt }
+                    : msg
+            )
+        };
+    });
+}
