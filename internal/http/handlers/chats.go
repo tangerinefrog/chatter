@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/labstack/echo/v5"
@@ -129,6 +130,17 @@ func (h *chatsHandler) ListUserChats(c *echo.Context) error {
 			UnreadMessagesCount: c.UnreadMessagesCount,
 		}
 	}
+
+	sort.Slice(chats, func(i, j int) bool {
+		if chats[i].LastMessageDate == nil {
+			return false
+		}
+		if chats[j].LastMessageDate == nil {
+			return true
+		}
+		
+		return chats[i].LastMessageDate.After(*chats[j].LastMessageDate)
+	})
 
 	resp := dto.ListChatsForUserResponse{
 		Chats: chats,
