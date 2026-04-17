@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <line style="stroke: white; stroke-width: 70; filter: initial; stroke-linecap: round; fill: rgb(255, 255, 255); paint-order: fill; transform-box: fill-box; transform-origin: 50% 50%;" x1="218.45" y2="156.704" x2="389.612" y1="399.001"/>
+  <line style="stroke: white; stroke-width: 70; filter: initial; stroke-linecap: round; paint-order: fill; transform-origin: 170.49px 354.608px;" x1="124.361" y2="396.952" x2="216.62" y1="312.264" transform="matrix(-1, 0, 0, -1, 0.000062, -0.000012)"/>
+</svg>
