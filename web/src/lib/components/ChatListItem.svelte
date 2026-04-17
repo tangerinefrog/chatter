@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Chat } from '$lib/models/chat';
-    import { formatTimestamp } from '$lib/utils/date';
+    import { formatTimestamp, formatDateShort, isToday } from '$lib/utils/date';
 
     export let chat: Chat;
     export let selected = false;
@@ -31,7 +31,13 @@
         {#if chat.unreadMessagesCount && chat.unreadMessagesCount > 0}
             <div class="unread-badge">{chat.unreadMessagesCount}</div>
         {:else if chat.lastMessageDate}
-            <div class="contact-date">{formatTimestamp(chat.lastMessageDate)}</div>
+            <div class="contact-date">
+                {#if isToday(chat.lastMessageDate)}
+                    {formatTimestamp(chat.lastMessageDate)}
+                {:else}
+                    {formatDateShort(chat.lastMessageDate)}
+                {/if}
+            </div>
         {/if}
     </div>
     <div class="contact-last">{chat.lastMessage || 'No messages'}</div>

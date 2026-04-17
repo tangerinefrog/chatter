@@ -7,12 +7,13 @@
     import { setMessages, messagesStore } from '$lib/stores/messages';
     import type { ApiError } from '$lib/api/client';
     import { KEYBOARD_KEYS } from '$lib/constants';
-
+    import { formatDateShort, isSameDay } from '$lib/utils/date';
+    
     import ChatList from '$lib/components/ChatList.svelte';
     import ChatInput from '$lib/components/ChatInput.svelte';
     import MessageRow from '$lib/components/MessageRow.svelte';
     import NewChatModal from '$lib/components/NewChatModal.svelte';
-
+    
     import '$lib/css/main.css';
 
     const MESSAGES_PAGE_SIZE = 20;
@@ -362,10 +363,13 @@
                 {:else if messages.length === 0}
                     <div class="empty-state">No messages yet. Start the conversation!</div>
                 {:else}
-                    {#each messages as msg}
-                        <MessageRow message={msg} />
-                    {/each}
-                {/if}
+                    {#each messages as msg, index}
+                    {#if index === 0 || !isSameDay(messages[index - 1].createdAt, msg.createdAt)}
+                        <div class="message-date-divider">{formatDateShort(msg.createdAt)}</div>
+                    {/if}
+                    <MessageRow message={msg} />
+                {/each}
+            {/if}
             </div>
 
             <ChatInput

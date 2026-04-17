@@ -229,6 +229,18 @@
     margin-top: 0.2rem;
 }
 
+.message-date-divider {
+    width: 100%;
+    padding: 0.2rem 0.75rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    margin: 0.5rem auto;
+    max-width: 8rem;
+}
+
 .message-status {
     font-size: 0.75rem;
     font-weight: 600;
