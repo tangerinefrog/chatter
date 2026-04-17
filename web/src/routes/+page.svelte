@@ -277,10 +277,13 @@
             return;
         }
 
+        const unreadMessagesCount = chats[chatIndex].unreadMessagesCount ?? 0;
+
         const updatedChat: Chat = {
             ...chats[chatIndex],
             lastMessage: message.text,
-            lastMessageDate: message.createdAt
+            lastMessageDate: message.createdAt,
+            unreadMessagesCount: !message.fromMe ? unreadMessagesCount + 1 : 0
         };
 
         chats = [
@@ -292,6 +295,8 @@
             currentChat = { ...updatedChat };
             if (message.fromMe) {
                 await scrollToBottom();
+            } else if (document.visibilityState === 'visible' && document.hasFocus()) {
+                await markVisibleMessagesAsRead();
             }
         }
     }
