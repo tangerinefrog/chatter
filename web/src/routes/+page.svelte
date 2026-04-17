@@ -5,15 +5,19 @@
     import { connect, disconnect, sendEvent, setOnNewMessageCallback } from '$lib/websocket/client';
     import { onMount, tick } from 'svelte';
     import { setMessages, messagesStore } from '$lib/stores/messages';
-    import { formatTimestamp } from '$lib/utils/date';
     import type { ApiError } from '$lib/api/client';
     import { KEYBOARD_KEYS } from '$lib/constants';
-    
+
+    import ChatList from '$lib/components/ChatList.svelte';
+    import ChatInput from '$lib/components/ChatInput.svelte';
+    import MessageRow from '$lib/components/MessageRow.svelte';
+    import NewChatModal from '$lib/components/NewChatModal.svelte';
+
     import '$lib/css/main.css';
-    
+
     const MESSAGES_PAGE_SIZE = 20;
-    const MESSAGES_LOAD_THRESHOLD = 15;    
-    
+    const MESSAGES_LOAD_THRESHOLD = 15;
+
     let chats: Chat[] = [];
     let currentChat: Chat | null = null;
     let currentMessage = '';
@@ -24,15 +28,15 @@
     let isLoadingMore = false;
     let error: string | null = null;
     let messagesContainer: HTMLDivElement;
-    let messageInput: HTMLInputElement;
+    let chatInput: { focusInput?: () => void } | null = null;
     let chatPages: Record<number, number> = {};
     let chatHasMore: Record<number, boolean> = {};
 
-    $: messages = currentChat ? $messagesStore[currentChat?.id] ?? [] : [];
+    $: messages = currentChat ? $messagesStore[currentChat.id] ?? [] : [];
 
     async function selectChat(chat: Chat) {
         tick().then(() => {
-            messageInput.focus();
+            chatInput?.focusInput?.();
         });
 
         if (currentChat?.id === chat.id) {
@@ -50,7 +54,7 @@
     async function refreshChats() {
         isLoadingChats = true;
         error = null;
-        
+
         try {
             const resp = await getChats();
             chats = resp.chats.map((chat) => ({
@@ -77,7 +81,7 @@
         }
 
         error = null;
-        
+
         const shouldPreserveScroll = prepend && currentChat?.id === chatID && !!messagesContainer;
         const previousScrollHeight = shouldPreserveScroll ? messagesContainer.scrollHeight : 0;
 
@@ -87,7 +91,6 @@
                 id: message.id,
                 text: message.content,
                 fromMe: message.from_me,
-                userId: message.user_id,
                 createdAt: new Date(message.created_at),
                 readAt: message.read_at ? new Date(message.read_at) : null
             }));
@@ -111,10 +114,10 @@
                     const lastMsg = msgs[msgs.length - 1];
                     const chatIndex = chats.findIndex(c => c.id === chatID);
                     if (chatIndex !== -1) {
-                        chats = chats.map((chat, idx) => 
+                        chats = chats.map((chat, idx) =>
                             idx === chatIndex 
-                                ? { ...chat, lastMessageDate: lastMsg.createdAt }
-                                : chat
+                            ? { ...chat, lastMessageDate: lastMsg.createdAt } 
+                            : chat
                         );
                         if (currentChat?.id === chatID) {
                             currentChat = { ...currentChat, lastMessageDate: lastMsg.createdAt };
@@ -164,9 +167,9 @@
             return;
         }
 
-        const lastVisible = visibleUnread.reduce((prev, row) => {
-            return Number(row.dataset.messageId) > Number(prev.dataset.messageId) ? row : prev;
-        });
+        const lastVisible = visibleUnread.reduce((prev, row) =>
+            Number(row.dataset.messageId) > Number(prev.dataset.messageId) ? row : prev
+        );
 
         const messageID = Number(lastVisible.dataset.messageId);
         if (!Number.isNaN(messageID)) {
@@ -179,7 +182,7 @@
 
         if (!messageClean || !currentChat?.id) {
             return;
-        }        
+        }
 
         sendEvent({
             type: 'send_message',
@@ -221,7 +224,7 @@
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             });
         }
-    }    
+    }
 
     function openModal() {
         isNewChatModalOpen = true;
@@ -230,6 +233,7 @@
     function closeModal() {
         isNewChatModalOpen = false;
         username = '';
+        error = null;
     }
 
     async function addChat() {
@@ -240,7 +244,7 @@
         }
 
         error = null;
-        
+
         try {
             await createChat({
                 is_direct: true,
@@ -265,16 +269,9 @@
         }
     }
 
-    function handleContactKeydown(event: KeyboardEvent, chat: Chat) {
-        if (event.key === KEYBOARD_KEYS.ENTER || event.key === KEYBOARD_KEYS.SPACE) {
-            event.preventDefault();
-            selectChat(chat);
-        }
-    }
-
     async function handleNewMessage(chatId: number, message: Message) {
-        const chatIndex = chats.findIndex(chat => chat.id === chatId);
-        
+        const chatIndex = chats.findIndex((chat) => chat.id === chatId);
+
         if (chatIndex === -1) {
             refreshChats();
             return;
@@ -340,44 +337,13 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <div class="app">
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            Chats
-
-            <button class="button" on:click={openModal}>
-                + Add new
-            </button>
-        </div>
-
-        <div class="contacts">
-            {#if isLoadingChats}
-                <div class="loading">Loading chats...</div>
-            {:else if chats.length === 0}
-                <div class="empty-state">No chats yet. Create one to get started!</div>
-            {:else}
-                {#each chats as chat}
-                    <div 
-                        role="button" 
-                        tabindex="0" 
-                        class="contact {chat.id === currentChat?.id ? 'active' : ''}"
-                        on:click={() => selectChat(chat)}
-                        on:keydown={(e) => handleContactKeydown(e, chat)}
-                        aria-label="Chat with {chat.name || 'Unknown'}"
-                    >
-                        <div class="contact-header">
-                            <div class="contact-name">{chat.name || 'Unknown'}</div>
-                            {#if chat.unreadMessagesCount && chat.unreadMessagesCount > 0}
-                                <div class="unread-badge">{chat.unreadMessagesCount}</div>
-                            {:else if chat.lastMessageDate}
-                                <div class="contact-date">{formatTimestamp(chat.lastMessageDate)}</div>
-                            {/if}
-                        </div>
-                        <div class="contact-last">{chat.lastMessage || 'No messages'}</div>
-                    </div>
-                {/each}
-            {/if}
-        </div>
-    </aside>
+    <ChatList
+        {chats}
+        currentChatId={currentChat?.id ?? null}
+        isLoading={isLoadingChats}
+        onSelectChat={selectChat}
+        onAddNewChat={openModal}
+    />
 
     <main class="chat">
         {#if currentChat}
@@ -392,94 +358,28 @@
                     <div class="empty-state">No messages yet. Start the conversation!</div>
                 {:else}
                     {#each messages as msg}
-                        <div class="message-row {msg.fromMe ? 'me' : 'them'}" data-message-id={msg.id} data-read={msg.readAt ? 'true' : 'false'}>
-                        <div class="bubble">
-                            <div class="message-text">{msg.text}</div>
-                            <div class="message-footer">
-                                <div class="message-timestamp" aria-label="Sent at {formatTimestamp(msg.createdAt)}">
-                                    {formatTimestamp(msg.createdAt)}
-                                </div>
-                                {#if msg.fromMe}
-                                     <span class="message-status" aria-label="{msg.readAt ? 'Read' : 'Sent'}">
-                                         {#if msg.readAt}
-                                             ✓✓
-                                         {:else}
-                                             ✓
-                                         {/if}
-                                     </span>
-                                 {/if}
-                             </div>
-                         </div>
-                     </div>
+                        <MessageRow message={msg} />
                     {/each}
                 {/if}
             </div>
 
-            <div class="chat-input">
-                <input
-                    type="text"
-                    placeholder="Type a message..."
-                    bind:value={currentMessage}
-                    bind:this={messageInput}
-                    on:keydown={(e) => {
-                        if (e.key === KEYBOARD_KEYS.ENTER && !e.shiftKey) {
-                            e.preventDefault();
-                            sendMessage();
-                        }
-                    }}
-                    aria-label="Message input"
-                    disabled={!currentChat}
-                />
-                <button 
-                    on:click={sendMessage}
-                    aria-label="Send message"
-                    disabled={!currentChat || !currentMessage.trim()}
-                >
-                    Send
-                </button>
-            </div>
+            <ChatInput
+                bind:this={chatInput}
+                bind:value={currentMessage}
+                disabled={!currentChat}
+                onSend={sendMessage}
+            />
         {:else}
-            <div class="empty">
-                Select a chat or start a new one
-            </div>
+            <div class="empty">Select a chat or start a new one</div>
         {/if}
     </main>
 
     {#if isNewChatModalOpen}
-        <div class="backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <div class="modal">
-                <h2 id="modal-title">Add new chat</h2>
-
-                {#if error}
-                    <div class="error" role="alert">{error}</div>
-                {/if}
-
-                <input
-                    class="input"
-                    type="text"
-                    placeholder="Username"
-                    bind:value={username}
-                    on:keydown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addChat();
-                        } else if (e.key === KEYBOARD_KEYS.ESCAPE) {
-                            e.preventDefault();
-                            closeModal();
-                        }
-                    }}
-                    aria-label="Username"
-                />
-
-                <div class="actions">
-                    <button class="button" on:click={addChat} disabled={!username.trim()}>
-                        Add
-                    </button>
-                    <button class="button button-secondary" on:click={closeModal}>
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
+        <NewChatModal
+            {error}
+            bind:username={username}
+            onSubmit={addChat}
+            onClose={closeModal}
+        />
     {/if}
 </div>
