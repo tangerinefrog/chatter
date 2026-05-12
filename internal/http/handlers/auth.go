@@ -55,11 +55,19 @@ func (h *userHandler) SignUp(c *echo.Context) error {
 		h.logger.Error("Hashing failed", zap.Error(err))
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	_, err = h.usersRepo.Create(c.Request().Context(), req.Username, passwordHash)
+	user, err := h.usersRepo.Create(c.Request().Context(), req.Username, passwordHash)
 	if err != nil {
 		h.logger.Error("Saving new user to DB failed", zap.Error(err))
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
+	token, expires, err := h.jwtManager.Generate(user.ID)
+	if err != nil {
+		h.logger.Error("Generating JWT for user failed", zap.Int32("user_id", user.ID), zap.Error(err))
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	setJwtCookie(c, token, expires)
 
 	return c.NoContent(http.StatusOK)
 }
