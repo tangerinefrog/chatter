@@ -9,13 +9,16 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
+	"github.com/pressly/goose/v3"
 	"github.com/tangerinefrog/chatter/internal/auth/jwt"
 	"github.com/tangerinefrog/chatter/internal/chats"
 	"github.com/tangerinefrog/chatter/internal/http/server"
 	"github.com/tangerinefrog/chatter/internal/http/websockets"
 	"github.com/tangerinefrog/chatter/internal/messages"
 	"github.com/tangerinefrog/chatter/internal/users"
+	"github.com/tangerinefrog/chatter/sql"
 	"go.uber.org/zap"
 )
 
@@ -50,7 +53,7 @@ func run(logger *zap.Logger) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	pool, err := initDB(ctx, cfg.dbConn, logger)
+	pool, err := initDB(ctx, cfg.dbConn)
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
@@ -72,7 +75,6 @@ func run(logger *zap.Logger) error {
 	}
 
 	logger.Info("Shutting down server...")
-	
 
 	return nil
 }
@@ -124,7 +126,7 @@ func loadConfig() (*config, error) {
 	return cfg, nil
 }
 
-func initDB(ctx context.Context, connStr string, logger *zap.Logger) (*pgxpool.Pool, error) {
+func initDB(ctx context.Context, connStr string) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.New(ctx, connStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create connection pool: %w", err)
@@ -134,6 +136,20 @@ func initDB(ctx context.Context, connStr string, logger *zap.Logger) (*pgxpool.P
 	if err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	goose.SetBaseFS(sql.EmbedMigrations)
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("failed to set database dialect: %w", err)
+	}
+
+	db := stdlib.OpenDBFromPool(pool)
+
+	if err := goose.UpContext(ctx, db, "migrations"); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("failed to apply database migrations: %w", err)
 	}
 
 	return pool, nil
