@@ -16,13 +16,14 @@
             } else {
                 await signup({ username, password });
             }
-            goto('/');
         } catch (err) {
             const apiError = err as ApiError;
-            error = apiError.message || `Failed to ${mode}`;
-        } finally {
+            error = apiError.message || `${mode} failed`;
             isLoading = false;
+            return; 
         }
+
+        goto('/');
     }
 
     function handleToggleMode() {
