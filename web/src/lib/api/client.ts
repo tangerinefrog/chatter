@@ -1,6 +1,5 @@
 import type { ChatsResponse, MessagesResponse, CreateChatRequest, AuthRequest, AuthResponse } from '$lib/types/api';
-
-const API_URL = 'http://localhost:8080/api';
+const API_URL = `http://${import.meta.env.VITE_API_ADDR}/api`;
 
 export interface ApiError extends Error {
     status?: number;

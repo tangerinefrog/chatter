@@ -26,7 +26,6 @@ type config struct {
 	dbConn        string
 	serverAddr    string
 	jwtSecret     string
-	webAddr       string
 	encryptionKey []byte
 }
 
@@ -98,7 +97,6 @@ func loadConfig() (*config, error) {
 		dbConn:        os.Getenv("DB_CONN"),
 		serverAddr:    os.Getenv("SRV_ADDR"),
 		jwtSecret:     os.Getenv("JWT_SECRET"),
-		webAddr:       os.Getenv("WEB_ADDR"),
 		encryptionKey: encryptionKey,
 	}
 
@@ -111,9 +109,6 @@ func loadConfig() (*config, error) {
 	}
 	if cfg.jwtSecret == "" {
 		missing = append(missing, "JWT_SECRET")
-	}
-	if cfg.webAddr == "" {
-		missing = append(missing, "WEB_ADDR")
 	}
 	if len(cfg.encryptionKey) == 0 {
 		missing = append(missing, "ENCRYPTION_KEY")

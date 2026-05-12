@@ -4,8 +4,7 @@ import type { Message } from "$lib/models/message";
 import { WS_RECONNECT_DELAY } from '$lib/constants';
 import { getChatKey, setMasterKey } from '$lib/stores/keys';
 import { decryptMessage, hexToUint8Array } from '$lib/crypto';
-
-const socketUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
+const WS_URL = `ws://${import.meta.env.VITE_API_ADDR}/ws`;
 
 let socket: WebSocket | null = null;
 let isIntentionalClose = false;
@@ -32,7 +31,7 @@ export function connect() {
         return;
     }
 
-    socket = new WebSocket(socketUrl);
+    socket = new WebSocket(WS_URL);
     socket.onopen = () => { };
 
     socket.onclose = (event) => {
