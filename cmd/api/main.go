@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/signal"
@@ -19,10 +20,11 @@ import (
 )
 
 type config struct {
-	dbConn     string
-	serverAddr string
-	jwtSecret  string
-	webAddr    string
+	dbConn        string
+	serverAddr    string
+	jwtSecret     string
+	webAddr       string
+	encryptionKey []byte
 }
 
 func main() {
@@ -56,7 +58,7 @@ func run(logger *zap.Logger) error {
 
 	usersRepo := users.NewRepository(pool)
 	chatsRepo := chats.NewRepository(pool)
-	messagesRepo := messages.NewRepository(pool)
+	messagesRepo := messages.NewRepository(pool, cfg.encryptionKey)
 
 	hub := websockets.NewHub(chatsRepo, messagesRepo, logger)
 	go hub.Run()
@@ -76,11 +78,26 @@ func run(logger *zap.Logger) error {
 }
 
 func loadConfig() (*config, error) {
+	encryptionKeyStr := os.Getenv("ENCRYPTION_KEY")
+	var encryptionKey []byte
+	var err error
+
+	if encryptionKeyStr != "" {
+		encryptionKey, err = hex.DecodeString(encryptionKeyStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ENCRYPTION_KEY format (must be hex-encoded): %w", err)
+		}
+		if len(encryptionKey) != 32 {
+			return nil, fmt.Errorf("ENCRYPTION_KEY must be 32 bytes when decoded, got %d", len(encryptionKey))
+		}
+	}
+
 	cfg := &config{
-		dbConn:     os.Getenv("DB_CONN"),
-		serverAddr: os.Getenv("SRV_ADDR"),
-		jwtSecret:  os.Getenv("JWT_SECRET"),
-		webAddr:    os.Getenv("WEB_ADDR"),
+		dbConn:        os.Getenv("DB_CONN"),
+		serverAddr:    os.Getenv("SRV_ADDR"),
+		jwtSecret:     os.Getenv("JWT_SECRET"),
+		webAddr:       os.Getenv("WEB_ADDR"),
+		encryptionKey: encryptionKey,
 	}
 
 	var missing []string
@@ -95,6 +112,9 @@ func loadConfig() (*config, error) {
 	}
 	if cfg.webAddr == "" {
 		missing = append(missing, "WEB_ADDR")
+	}
+	if len(cfg.encryptionKey) == 0 {
+		missing = append(missing, "ENCRYPTION_KEY")
 	}
 
 	if len(missing) > 0 {

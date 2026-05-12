@@ -2,7 +2,7 @@
     import type { Chat } from '$lib/models/chat';
     import type { Message } from '$lib/models/message';
     import { getChats, getMessages, createChat } from '$lib/api/client';
-    import { connect, disconnect, sendEvent, setOnNewMessageCallback } from '$lib/websocket/client';
+    import { connect, disconnect, sendEvent, setOnNewMessageCallback, initializeEncryption } from '$lib/websocket/client';
     import { onMount, tick } from 'svelte';
     import { setMessages, messagesStore } from '$lib/stores/messages';
     import type { ApiError } from '$lib/api/client';
@@ -326,6 +326,9 @@
     }
 
     onMount(() => {
+        initializeEncryption().catch(error => {
+            console.error('Failed to initialize encryption:', error);
+        });
         connect();
         refreshChats();
         setOnNewMessageCallback(handleNewMessage);
