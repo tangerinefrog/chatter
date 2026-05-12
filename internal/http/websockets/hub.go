@@ -149,7 +149,7 @@ func (h *Hub) handleReadMessage(chatID int32, senderID int32, messageID int64) {
 		if u.ID == senderID {
 			continue
 		}
-		
+
 		client, ok := h.clients[u.ID]
 		if ok {
 			msg := Event{

@@ -2,104 +2,28 @@ package messages
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/base64"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tangerinefrog/chatter/internal/crypto"
 	"github.com/tangerinefrog/chatter/internal/db"
 )
 
 type MessagesRepository struct {
-	q             *db.Queries
-	encryptionKey []byte
+	q      *db.Queries
+	cipher *crypto.Cipher
 }
 
 const PageSize int32 = 20
 
-func (r *MessagesRepository) deriveChatKey(chatID int32) []byte {
-	h := sha256.New()
-	h.Write(r.encryptionKey)
-	h.Write([]byte(fmt.Sprintf("%d", chatID)))
-	return h.Sum(nil)
-}
-
-func NewRepository(pool *pgxpool.Pool, encryptionKey []byte) *MessagesRepository {
+func NewRepository(pool *pgxpool.Pool, cipher *crypto.Cipher) *MessagesRepository {
 	return &MessagesRepository{
-		q:             db.New(pool),
-		encryptionKey: encryptionKey,
+		q:      db.New(pool),
+		cipher: cipher,
 	}
-}
-
-const encryptionKeySize = 32
-
-func EncryptMessageContent(key []byte, plaintext string) (string, error) {
-	if len(key) != encryptionKeySize {
-		return "", fmt.Errorf("encryption key must be %d bytes", encryptionKeySize)
-	}
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return "", fmt.Errorf("failed to create cipher: %w", err)
-	}
-
-	aead, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", fmt.Errorf("failed to create AEAD: %w", err)
-	}
-
-	nonce := make([]byte, aead.NonceSize())
-	if _, err := rand.Read(nonce); err != nil {
-		return "", fmt.Errorf("failed to generate nonce: %w", err)
-	}
-
-	ciphertext := aead.Seal(nil, nonce, []byte(plaintext), nil)
-	payload := append(nonce, ciphertext...)
-
-	return base64.StdEncoding.EncodeToString(payload), nil
-}
-
-func DecryptMessageContent(key []byte, encoded string) (string, error) {
-	if len(key) != encryptionKeySize {
-		return "", fmt.Errorf("encryption key must be %d bytes", encryptionKeySize)
-	}
-
-	payload, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode ciphertext: %w", err)
-	}
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return "", fmt.Errorf("failed to create cipher: %w", err)
-	}
-
-	aead, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", fmt.Errorf("failed to create AEAD: %w", err)
-	}
-
-	nonceSize := aead.NonceSize()
-	if len(payload) < nonceSize {
-		return "", errors.New("invalid ciphertext payload")
-	}
-
-	nonce := payload[:nonceSize]
-	ciphertext := payload[nonceSize:]
-
-	plaintext, err := aead.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to decrypt message: %w", err)
-	}
-
-	return string(plaintext), nil
 }
 
 func (r *MessagesRepository) CreateMessage(
@@ -108,17 +32,12 @@ func (r *MessagesRepository) CreateMessage(
 	chatID int32,
 	content string,
 ) (int64, error) {
-	chatKey := r.deriveChatKey(chatID)
-
-	encryptedContent, err := EncryptMessageContent(chatKey, content)
-	if err != nil {
-		return 0, fmt.Errorf("failed to encrypt message: %w", err)
-	}
+	contentEncrypted, err := r.cipher.Encrypt(content)
 
 	id, err := r.q.CreateMessage(ctx, db.CreateMessageParams{
 		ChatID:  chatID,
 		UserID:  pgtype.Int4{Int32: userID, Valid: true},
-		Content: encryptedContent,
+		Content: contentEncrypted,
 	})
 
 	if err != nil {
@@ -149,8 +68,6 @@ func (r *MessagesRepository) ListChatMessages(
 		return nil, err
 	}
 
-	chatKey := r.deriveChatKey(chatID)
-
 	result := make([]Message, len(rows))
 	for i, m := range rows {
 		var userID int32
@@ -167,16 +84,15 @@ func (r *MessagesRepository) ListChatMessages(
 			readAt = &m.ReadAt.Time
 		}
 
-		decryptedContent, err := DecryptMessageContent(chatKey, m.Content)
+		contentDecrypted, err := r.cipher.Decrypt(m.Content)
 		if err != nil {
-			decryptedContent = m.Content
+			return nil, err
 		}
-
 		result[i] = Message{
 			ID:        m.ID,
 			UserID:    userID,
 			ChatID:    chatID,
-			Content:   decryptedContent,
+			Content:   contentDecrypted,
 			CreatedAt: m.CreatedAt.Time,
 			ReadAt:    readAt,
 		}

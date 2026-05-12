@@ -2,13 +2,12 @@
     import type { Chat } from '$lib/models/chat';
     import type { Message } from '$lib/models/message';
     import { getChats, getMessages, createChat } from '$lib/api/client';
-    import { connect, disconnect, sendEvent, setOnNewMessageCallback, initializeEncryption } from '$lib/websocket/client';
+    import { connect, disconnect, sendEvent, setOnNewMessageCallback } from '$lib/websocket/client';
     import { onMount, tick } from 'svelte';
     import { setMessages, messagesStore } from '$lib/stores/messages';
-    import type { ApiError } from '$lib/api/client';
     import { KEYBOARD_KEYS } from '$lib/constants';
     import { formatDateShort, isSameDay } from '$lib/utils/date';
-    
+    import type { ApiError } from '$lib/api/client';
     import ChatList from '$lib/components/ChatList.svelte';
     import ChatInput from '$lib/components/ChatInput.svelte';
     import MessageRow from '$lib/components/MessageRow.svelte';
@@ -326,9 +325,6 @@
     }
 
     onMount(() => {
-        initializeEncryption().catch(error => {
-            console.error('Failed to initialize encryption:', error);
-        });
         connect();
         refreshChats();
         setOnNewMessageCallback(handleNewMessage);

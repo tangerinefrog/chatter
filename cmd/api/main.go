@@ -14,6 +14,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/tangerinefrog/chatter/internal/auth/jwt"
 	"github.com/tangerinefrog/chatter/internal/chats"
+	"github.com/tangerinefrog/chatter/internal/crypto"
 	"github.com/tangerinefrog/chatter/internal/http/server"
 	"github.com/tangerinefrog/chatter/internal/http/websockets"
 	"github.com/tangerinefrog/chatter/internal/messages"
@@ -58,9 +59,11 @@ func run(logger *zap.Logger) error {
 	}
 	defer pool.Close()
 
+	cipher, err := crypto.NewCipher(cfg.encryptionKey)
+
 	usersRepo := users.NewRepository(pool)
-	chatsRepo := chats.NewRepository(pool)
-	messagesRepo := messages.NewRepository(pool, cfg.encryptionKey)
+	chatsRepo := chats.NewRepository(pool, cipher)
+	messagesRepo := messages.NewRepository(pool, cipher)
 
 	hub := websockets.NewHub(chatsRepo, messagesRepo, logger)
 	go hub.Run()

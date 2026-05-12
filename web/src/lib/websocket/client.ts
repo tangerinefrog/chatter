@@ -2,8 +2,7 @@ import { appendMessage, markSentMessagesAsRead } from '$lib/stores/messages';
 import type { WsEvent } from "$lib/websocket/event";
 import type { Message } from "$lib/models/message";
 import { WS_RECONNECT_DELAY } from '$lib/constants';
-import { getChatKey, setMasterKey } from '$lib/stores/keys';
-import { decryptMessage, hexToUint8Array } from '$lib/crypto';
+
 const WS_URL = `ws://${import.meta.env.VITE_API_ADDR}/ws`;
 
 let socket: WebSocket | null = null;
@@ -12,18 +11,6 @@ let onNewMessageCallback: ((chatId: number, message: Message) => void) | null = 
 
 export function setOnNewMessageCallback(callback: (chatId: number, message: Message) => void) {
     onNewMessageCallback = callback;
-}
-
-export async function initializeEncryption(): Promise<void> {
-    const encryptionKeyHex = import.meta.env.VITE_ENCRYPTION_KEY;
-    if (encryptionKeyHex) {
-        try {
-            const key = hexToUint8Array(encryptionKeyHex);
-            await setMasterKey(key);
-        } catch (error) {
-            console.error('Failed to initialize encryption key:', error);
-        }
-    }
 }
 
 export function connect() {
@@ -75,21 +62,10 @@ async function handleEvent(event: WsEvent) {
     switch (event.type) {
         case 'new_message':
             if (event.chat_id && event.message_id) {
-                let content = event.content ?? "";
-                
-                try {
-                    const chatKey = await getChatKey(event.chat_id);
-                    if (chatKey && content) {
-                        content = await decryptMessage(chatKey, content);
-                    }
-                } catch (error) {
-                    console.error('Failed to decrypt message:', error);
-                }
-                
                 const message: Message = {
                     fromMe: event.from_me ?? false,
                     id: event.message_id,
-                    text: content,
+                    text: event.content ?? "",
                     createdAt: event.date instanceof Date 
                         ? event.date 
                         : event.date 

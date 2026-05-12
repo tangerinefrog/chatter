@@ -9,18 +9,21 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tangerinefrog/chatter/internal/crypto"
 	"github.com/tangerinefrog/chatter/internal/db"
 )
 
 type ChatsRepository struct {
-	q    *db.Queries
-	pool *pgxpool.Pool
+	q      *db.Queries
+	pool   *pgxpool.Pool
+	cipher *crypto.Cipher
 }
 
-func NewRepository(p *pgxpool.Pool) *ChatsRepository {
+func NewRepository(p *pgxpool.Pool, cipher *crypto.Cipher) *ChatsRepository {
 	return &ChatsRepository{
-		q:    db.New(p),
-		pool: p,
+		q:      db.New(p),
+		pool:   p,
+		cipher: cipher,
 	}
 }
 
@@ -116,6 +119,14 @@ func (r *ChatsRepository) ListChatsForUser(ctx context.Context, userID int32) ([
 		err = json.Unmarshal(c.LastMessageJson, &lastMessage)
 		if err != nil {
 			return nil, err
+		}
+
+		if lastMessage.Content != "" {
+			contentDecrypted, err := r.cipher.Decrypt(lastMessage.Content)
+			if err != nil {
+				return nil, err
+			}
+			lastMessage.Content = contentDecrypted
 		}
 
 		chats[i] = Chat{
