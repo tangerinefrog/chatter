@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/tangerinefrog/chatter/internal/chats"
 	"github.com/tangerinefrog/chatter/internal/http/dto"
@@ -40,12 +41,12 @@ func (h *chatsHandler) CreateChat(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	userID, ok := c.Get("user_id").(int32)
+	userID, ok := c.Get("user_id").(uuid.UUID)
 	if !ok {
 		return c.NoContent(http.StatusUnauthorized)
 	}
 
-	userIDs := make([]int32, len(req.ParticipantUsernames)+1)
+	userIDs := make([]uuid.UUID, len(req.ParticipantUsernames)+1)
 	// set the first participant as the current user
 	userIDs[0] = userID
 
@@ -55,18 +56,18 @@ func (h *chatsHandler) CreateChat(c *echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("user with username '%s' not found", username))
 		}
 
-		if u.ID == userID {
+		if u.ID.Bytes == userID {
 			return echo.NewHTTPError(http.StatusBadRequest, "you cannot create a chat with yourself")
 		}
 
-		userIDs[i+1] = u.ID
+		userIDs[i+1] = u.ID.Bytes
 	}
 
 	var chatType chats.ChatType
 	if req.IsDirect {
 		alreadyExists, err := h.chatsRepo.IsDirectChatExists(c.Request().Context(), userIDs[0], userIDs[1])
 		if err != nil {
-			h.logger.Error("Could not check for an existing chat", zap.Int32("UserID_1", userIDs[0]), zap.Int32("UserID_2", userIDs[1]), zap.Error(err))
+			h.logger.Error("Could not check for an existing chat", zap.String("UserID_1", userIDs[0].String()), zap.String("UserID_2", userIDs[1].String()), zap.Error(err))
 			return echo.NewHTTPError(http.StatusBadRequest, "could not create chat")
 		}
 		if alreadyExists {
@@ -80,22 +81,22 @@ func (h *chatsHandler) CreateChat(c *echo.Context) error {
 
 	chatID, err := h.chatsRepo.Create(c.Request().Context(), req.Name, chatType, userID, userIDs)
 	if err != nil {
-		h.logger.Error("Could not create chat between users", zap.Int32("UserID", userID), zap.Error(err))
+		h.logger.Error("Could not create chat between users", zap.String("UserID", userID.String()), zap.Error(err))
 		return echo.NewHTTPError(http.StatusBadRequest, "could not create chat")
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewChatResponse{ID: chatID})
+	return c.JSON(http.StatusCreated, dto.NewChatResponse{ID: chatID.String()})
 }
 
 func (h *chatsHandler) ListUserChats(c *echo.Context) error {
-	userID, ok := c.Get("user_id").(int32)
+	userID, ok := c.Get("user_id").(uuid.UUID)
 	if !ok {
 		return c.NoContent(http.StatusUnauthorized)
 	}
 
 	dbChats, err := h.chatsRepo.ListChatsForUser(c.Request().Context(), userID)
 	if err != nil {
-		h.logger.Error("Could not get chats for user", zap.Int32("UserID", userID), zap.Error(err))
+		h.logger.Error("Could not get chats for user", zap.String("UserID", userID.String()), zap.Error(err))
 		return echo.NewHTTPError(http.StatusBadRequest, "could not get chats")
 	}
 
@@ -106,7 +107,7 @@ func (h *chatsHandler) ListUserChats(c *echo.Context) error {
 		chatName := c.Name
 		for i, p := range c.Participants {
 			participants[i] = dto.ChatParticipant{
-				ID:       p.ID,
+				ID:       p.ID.String(),
 				Username: p.Username,
 			}
 			if chatName == "" && p.ID != userID {
@@ -121,7 +122,7 @@ func (h *chatsHandler) ListUserChats(c *echo.Context) error {
 		}
 
 		chats[i] = dto.Chat{
-			ID:                  c.ID,
+			ID:                  c.ID.String(),
 			Type:                c.Type,
 			Name:                chatName,
 			Participants:        participants,
@@ -138,7 +139,7 @@ func (h *chatsHandler) ListUserChats(c *echo.Context) error {
 		if chats[j].LastMessageDate == nil {
 			return true
 		}
-		
+
 		return chats[i].LastMessageDate.After(*chats[j].LastMessageDate)
 	})
 

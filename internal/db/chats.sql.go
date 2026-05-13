@@ -28,12 +28,12 @@ RETURNING id
 type CreateChatParams struct {
 	Type      string
 	Name      pgtype.Text
-	CreatedBy pgtype.Int4
+	CreatedBy pgtype.UUID
 }
 
-func (q *Queries) CreateChat(ctx context.Context, arg CreateChatParams) (int32, error) {
+func (q *Queries) CreateChat(ctx context.Context, arg CreateChatParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, createChat, arg.Type, arg.Name, arg.CreatedBy)
-	var id int32
+	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
 }
@@ -48,8 +48,8 @@ INSERT INTO chats_users (
 `
 
 type CreateChatUserParams struct {
-	ChatID int32
-	UserID int32
+	ChatID pgtype.UUID
+	UserID pgtype.UUID
 }
 
 func (q *Queries) CreateChatUser(ctx context.Context, arg CreateChatUserParams) error {
@@ -71,13 +71,13 @@ LIMIT 1
 `
 
 type GetDirectChatBetweenUsersParams struct {
-	UserID   int32
-	UserID_2 int32
+	UserID   pgtype.UUID
+	UserID_2 pgtype.UUID
 }
 
-func (q *Queries) GetDirectChatBetweenUsers(ctx context.Context, arg GetDirectChatBetweenUsersParams) (int32, error) {
+func (q *Queries) GetDirectChatBetweenUsers(ctx context.Context, arg GetDirectChatBetweenUsersParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, getDirectChatBetweenUsers, arg.UserID, arg.UserID_2)
-	var id int32
+	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
 }
@@ -92,11 +92,11 @@ WHERE cu.chat_id = $1
 `
 
 type ListChatUsersRow struct {
-	UserID   int32
+	UserID   pgtype.UUID
 	Username string
 }
 
-func (q *Queries) ListChatUsers(ctx context.Context, chatID int32) ([]ListChatUsersRow, error) {
+func (q *Queries) ListChatUsers(ctx context.Context, chatID pgtype.UUID) ([]ListChatUsersRow, error) {
 	rows, err := q.db.Query(ctx, listChatUsers, chatID)
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ WHERE
 `
 
 type ListUserChatsRow struct {
-	ID                  int32
+	ID                  pgtype.UUID
 	Type                string
 	Name                pgtype.Text
 	CreatedAt           pgtype.Timestamptz
@@ -171,7 +171,7 @@ type ListUserChatsRow struct {
 	UnreadMessagesCount int64
 }
 
-func (q *Queries) ListUserChats(ctx context.Context, userID pgtype.Int4) ([]ListUserChatsRow, error) {
+func (q *Queries) ListUserChats(ctx context.Context, userID pgtype.UUID) ([]ListUserChatsRow, error) {
 	rows, err := q.db.Query(ctx, listUserChats, userID)
 	if err != nil {
 		return nil, err

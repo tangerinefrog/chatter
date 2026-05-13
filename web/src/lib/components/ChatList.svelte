@@ -3,7 +3,7 @@
     import ChatListItem from './ChatListItem.svelte';
 
     export let chats: Chat[] = [];
-    export let currentChatId: number | null = null;
+    export let currentChatId: string | null = null;
     export let isLoading = false;
     export let onSelectChat: (chat: Chat) => void;
     export let onAddNewChat: () => void;

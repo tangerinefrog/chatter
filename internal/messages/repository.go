@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tangerinefrog/chatter/internal/crypto"
@@ -29,37 +30,37 @@ func NewRepository(pool *pgxpool.Pool, cipher *crypto.Cipher) *MessagesRepositor
 
 func (r *MessagesRepository) CreateMessage(
 	ctx context.Context,
-	userID int32,
-	chatID int32,
+	userID uuid.UUID,
+	chatID uuid.UUID,
 	content string,
-) (int64, error) {
+) (uuid.UUID, error) {
 	encryptedBytes, err := r.cipher.Encrypt([]byte(content))
 	if err != nil {
-		return 0, err
+		return uuid.Nil, err
 	}
 
 	id, err := r.q.CreateMessage(ctx, db.CreateMessageParams{
-		ChatID:  chatID,
-		UserID:  pgtype.Int4{Int32: userID, Valid: true},
+		ChatID:  pgtype.UUID{Bytes: chatID, Valid: true},
+		UserID:  pgtype.UUID{Bytes: userID, Valid: true},
 		Content: base64.StdEncoding.EncodeToString(encryptedBytes),
 	})
 
 	if err != nil {
-		return 0, err
+		return uuid.Nil, err
 	}
 
-	return id, nil
+	return id.Bytes, nil
 }
 
 func (r *MessagesRepository) ListChatMessages(
 	ctx context.Context,
-	chatID int32,
+	chatID uuid.UUID,
 	pageNumber int32,
 ) ([]Message, error) {
 	offset := PageSize * (pageNumber - 1)
 
 	rows, err := r.q.ListTopNMessages(ctx, db.ListTopNMessagesParams{
-		ChatID: chatID,
+		ChatID: pgtype.UUID{Bytes: chatID, Valid: true},
 		Limit:  PageSize,
 		Offset: offset,
 	})
@@ -74,11 +75,11 @@ func (r *MessagesRepository) ListChatMessages(
 
 	result := make([]Message, len(rows))
 	for i, m := range rows {
-		var userID int32
+		var userID uuid.UUID
 		if !m.UserID.Valid {
-			userID = -1
+			userID = uuid.Nil
 		} else {
-			userID = m.UserID.Int32
+			userID = m.UserID.Bytes
 		}
 
 		var readAt *time.Time
@@ -98,7 +99,7 @@ func (r *MessagesRepository) ListChatMessages(
 			return nil, err
 		}
 		result[i] = Message{
-			ID:        m.ID,
+			ID:        m.ID.Bytes,
 			UserID:    userID,
 			ChatID:    chatID,
 			Content:   string(contentDecrypted),
@@ -112,14 +113,14 @@ func (r *MessagesRepository) ListChatMessages(
 
 func (r *MessagesRepository) MarkMessagesAsRead(
 	ctx context.Context,
-	messageID int64,
-	chatID int32,
-	userID int32,
+	messageID uuid.UUID,
+	chatID uuid.UUID,
+	userID uuid.UUID,
 ) error {
 	err := r.q.MarkMessagesAsRead(ctx, db.MarkMessagesAsReadParams{
-		ID:     messageID,
-		ChatID: chatID,
-		UserID: pgtype.Int4{Int32: userID, Valid: true},
+		ID:     pgtype.UUID{Bytes: messageID, Valid: true},
+		ChatID: pgtype.UUID{Bytes: chatID, Valid: true},
+		UserID: pgtype.UUID{Bytes: userID, Valid: true},
 	})
 
 	if err != nil {

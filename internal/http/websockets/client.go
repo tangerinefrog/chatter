@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
 type Client struct {
-	userID int32
+	userID uuid.UUID
 	conn   *websocket.Conn
 	send   chan []byte
 	hub    *Hub
@@ -18,7 +19,7 @@ type Client struct {
 	once   sync.Once
 }
 
-func ConnectClient(userID int32, conn *websocket.Conn, hub *Hub, logger *zap.Logger) {
+func ConnectClient(userID uuid.UUID, conn *websocket.Conn, hub *Hub, logger *zap.Logger) {
 	c := &Client{
 		userID: userID,
 		conn:   conn,
@@ -44,7 +45,7 @@ func (c *Client) readPump() {
 				websocket.CloseGoingAway,
 				websocket.CloseNormalClosure,
 			) {
-				c.logger.Error("Could not read WS message", zap.Int32("UserID", c.userID), zap.Error(err))
+				c.logger.Error("Could not read WS message", zap.String("UserID", c.userID.String()), zap.Error(err))
 			}
 			break
 		}
@@ -52,7 +53,7 @@ func (c *Client) readPump() {
 		var event Event
 		err = json.Unmarshal(data, &event)
 		if err != nil {
-			c.logger.Error("Could not deserialize WS message", zap.Int32("UserID", c.userID), zap.Error(err))
+			c.logger.Error("Could not deserialize WS message", zap.String("UserID", c.userID.String()), zap.Error(err))
 			break
 		}
 

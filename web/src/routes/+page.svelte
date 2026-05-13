@@ -29,8 +29,8 @@
     let error: string | null = null;
     let messagesContainer: HTMLDivElement;
     let chatInput: { focusInput?: () => void } | null = null;
-    let chatPages: Record<number, number> = {};
-    let chatHasMore: Record<number, boolean> = {};
+    let chatPages: Record<string, number> = {};
+    let chatHasMore: Record<string, boolean> = {};
 
     $: messages = currentChat ? $messagesStore[currentChat.id] ?? [] : [];
 
@@ -75,7 +75,7 @@
         }
     }
 
-    async function loadMessages(chatID: number, page: number, prepend?: boolean) {
+    async function loadMessages(chatID: string, page: number, prepend?: boolean) {
         if (!prepend) {
             isLoadingMessages = true;
         }
@@ -167,12 +167,14 @@
             return;
         }
 
-        const lastVisible = visibleUnread.reduce((prev, row) =>
-            Number(row.dataset.messageId) > Number(prev.dataset.messageId) ? row : prev
-        );
+        const lastVisible = visibleUnread.reduce((prev, row) => {
+            const prevDate = new Date(prev.dataset.messageDate ?? '');
+            const rowDate = new Date(row.dataset.messageDate ?? '');
+            return rowDate > prevDate ? row : prev;
+        });
 
-        const messageID = Number(lastVisible.dataset.messageId);
-        if (!Number.isNaN(messageID)) {
+        const messageID = lastVisible.dataset.messageId;
+        if (messageID) {
             await markAsRead(messageID);
         }
     }
@@ -269,7 +271,7 @@
         }
     }
 
-    async function handleNewMessage(chatId: number, message: Message) {
+    async function handleNewMessage(chatId: string, message: Message) {
         const chatIndex = chats.findIndex((chat) => chat.id === chatId);
 
         if (chatIndex === -1) {
@@ -301,7 +303,7 @@
         }
     }
 
-    async function markAsRead(messageID: number) {
+    async function markAsRead(messageID: string | undefined) {
         if (!currentChat?.id) {
             return;
         }

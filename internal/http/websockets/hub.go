@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/tangerinefrog/chatter/internal/chats"
 	"github.com/tangerinefrog/chatter/internal/messages"
 	"go.uber.org/zap"
@@ -13,7 +14,7 @@ import (
 
 type Hub struct {
 	mu           sync.RWMutex
-	clients      map[int32]*Client
+	clients      map[uuid.UUID]*Client
 	register     chan *Client
 	unregister   chan *Client
 	events       chan Event
@@ -24,7 +25,7 @@ type Hub struct {
 
 func NewHub(chatsRepo *chats.ChatsRepository, messagesRepo *messages.MessagesRepository, logger *zap.Logger) *Hub {
 	return &Hub{
-		clients:      make(map[int32]*Client),
+		clients:      make(map[uuid.UUID]*Client),
 		register:     make(chan *Client),
 		unregister:   make(chan *Client),
 		events:       make(chan Event),
@@ -65,7 +66,7 @@ func (h *Hub) Shutdown() {
 	h.logger.Info("WS Clients", zap.Any("Clients", clients))
 
 	for _, client := range clients {
-		h.logger.Info("Closing WS client", zap.Int32("UserID", client.userID))
+		h.logger.Info("Closing WS client", zap.String("UserID", client.userID.String()))
 		client.close()
 	}
 }
@@ -79,19 +80,19 @@ func (h *Hub) handleEvent(e Event) {
 	}
 }
 
-func (h *Hub) handleNewMessage(chatID int32, senderID int32, message string) {
+func (h *Hub) handleNewMessage(chatID uuid.UUID, senderID uuid.UUID, message string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
 	id, err := h.messagesRepo.CreateMessage(ctx, senderID, chatID, message)
 	if err != nil {
-		h.logger.Error("Could not save message to DB", zap.Int32("ChatID", chatID), zap.Int32("UserID", senderID), zap.Error(err))
+		h.logger.Error("Could not save message to DB", zap.String("ChatID", chatID.String()), zap.String("UserID", senderID.String()), zap.Error(err))
 		return
 	}
 
 	chatUsers, err := h.chatsRepo.ListUsersForChat(ctx, chatID)
 	if err != nil {
-		h.logger.Error("Could not get chat participants from DB", zap.Int32("ChatID", chatID), zap.Error(err))
+		h.logger.Error("Could not get chat participants from DB", zap.String("ChatID", chatID.String()), zap.Error(err))
 		return
 	}
 
@@ -99,7 +100,7 @@ func (h *Hub) handleNewMessage(chatID int32, senderID int32, message string) {
 	defer h.mu.RUnlock()
 
 	for _, u := range chatUsers {
-		client, ok := h.clients[u.ID]
+		client, ok := h.clients[u.ID.Bytes]
 		if ok {
 			msg := Event{
 				Type:      EventNewMessage,
@@ -107,7 +108,7 @@ func (h *Hub) handleNewMessage(chatID int32, senderID int32, message string) {
 				SenderID:  senderID,
 				ChatID:    chatID,
 				MessageID: id,
-				FromMe:    u.ID == senderID,
+				FromMe:    u.ID.Bytes == senderID,
 			}
 			h.sendMessageToClient(msg, client)
 		}
@@ -124,21 +125,21 @@ func (h *Hub) sendMessageToClient(m Event, c *Client) {
 	select {
 	case c.send <- messageBytes:
 	default:
-		h.logger.Debug("Could not send message to client, skip", zap.Int32("UserID", c.userID))
+		h.logger.Debug("Could not send message to client, skip", zap.String("UserID", c.userID.String()))
 	}
 }
 
-func (h *Hub) handleReadMessage(chatID int32, senderID int32, messageID int64) {
+func (h *Hub) handleReadMessage(chatID uuid.UUID, senderID uuid.UUID, messageID uuid.UUID) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
 	if err := h.messagesRepo.MarkMessagesAsRead(ctx, messageID, chatID, senderID); err != nil {
-		h.logger.Error("Could not mark messages as read in DB", zap.Int32("ChatID", chatID), zap.Int64("MessageID", messageID), zap.Int32("UserID", senderID), zap.Error(err))
+		h.logger.Error("Could not mark messages as read in DB", zap.String("ChatID", chatID.String()), zap.String("MessageID", messageID.String()), zap.String("UserID", senderID.String()), zap.Error(err))
 	}
 
 	chatUsers, err := h.chatsRepo.ListUsersForChat(ctx, chatID)
 	if err != nil {
-		h.logger.Error("Could not get chat participants from DB", zap.Int32("ChatID", chatID), zap.Error(err))
+		h.logger.Error("Could not get chat participants from DB", zap.String("ChatID", chatID.String()), zap.Error(err))
 		return
 	}
 
@@ -146,11 +147,11 @@ func (h *Hub) handleReadMessage(chatID int32, senderID int32, messageID int64) {
 	defer h.mu.RUnlock()
 
 	for _, u := range chatUsers {
-		if u.ID == senderID {
+		if u.ID.Bytes == senderID {
 			continue
 		}
 
-		client, ok := h.clients[u.ID]
+		client, ok := h.clients[u.ID.Bytes]
 		if ok {
 			msg := Event{
 				Type:      EventReadMessage,

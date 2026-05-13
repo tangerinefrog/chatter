@@ -1,5 +1,5 @@
 export interface ApiChat {
-    id: number;
+    id: string;
     type: 'direct' | 'group';
     name: string | null;
     last_message: string | null;
@@ -9,10 +9,10 @@ export interface ApiChat {
 }
 
 export interface ApiMessage {
-    id: number;
+    id: string;
     content: string;
     from_me: boolean;
-    user_id: number;
+    user_id: string;
     created_at: string;
     read_at: string | null;
 }

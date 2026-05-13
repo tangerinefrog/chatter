@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tangerinefrog/chatter/internal/db"
 )
@@ -31,8 +33,8 @@ func (r *UsersRepository) Create(ctx context.Context, username, passwordHash str
 	return &u, nil
 }
 
-func (r *UsersRepository) GetByID(ctx context.Context, id int32) (*db.User, error) {
-	u, err := r.q.GetUserByID(ctx, id)
+func (r *UsersRepository) GetByID(ctx context.Context, id uuid.UUID) (*db.User, error) {
+	u, err := r.q.GetUserByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil

@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v5"
 	"github.com/tangerinefrog/chatter/internal/http/websockets"
@@ -37,7 +38,7 @@ func (h *websocketsHandler) ServeWS(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "could not upgrade connection")
 	}
 
-	userID, ok := c.Get("user_id").(int32)
+	userID, ok := c.Get("user_id").(uuid.UUID)
 	if !ok {
 		return c.NoContent(http.StatusUnauthorized)
 	}

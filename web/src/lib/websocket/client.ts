@@ -7,9 +7,9 @@ const WS_URL = `ws://${import.meta.env.VITE_API_ADDR}/ws`;
 
 let socket: WebSocket | null = null;
 let isIntentionalClose = false;
-let onNewMessageCallback: ((chatId: number, message: Message) => void) | null = null;
+let onNewMessageCallback: ((chatId: string, message: Message) => void) | null = null;
 
-export function setOnNewMessageCallback(callback: (chatId: number, message: Message) => void) {
+export function setOnNewMessageCallback(callback: (chatId: string, message: Message) => void) {
     onNewMessageCallback = callback;
 }
 

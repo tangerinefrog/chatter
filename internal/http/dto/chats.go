@@ -9,7 +9,7 @@ type CreateChatRequest struct {
 }
 
 type NewChatResponse struct {
-	ID int32 `json:"id"`
+	ID string `json:"id"`
 }
 
 type ListChatsForUserResponse struct {
@@ -17,7 +17,7 @@ type ListChatsForUserResponse struct {
 }
 
 type Chat struct {
-	ID                  int32             `json:"id"`
+	ID                  string            `json:"id"`
 	Type                string            `json:"type"`
 	Name                string            `json:"name"`
 	Participants        []ChatParticipant `json:"participants"`
@@ -27,6 +27,6 @@ type Chat struct {
 }
 
 type ChatParticipant struct {
-	ID       int32  `json:"id"`
+	ID       string  `json:"id"`
 	Username string `json:"username"`
 }

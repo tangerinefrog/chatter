@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"net/http"
-	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 )
 
@@ -12,12 +12,11 @@ func Chat() echo.MiddlewareFunc {
 		return func(c *echo.Context) error {
 			param := c.Param("chatID")
 
-			chatID, err := strconv.Atoi(param)
+			id, err := uuid.Parse(param)
 			if err != nil {
 				return echo.NewHTTPError(http.StatusNotFound, "chat not found")
 			}
-
-			c.Set("chat_id", int32(chatID))
+			c.Set("chat_id", id)
 
 			return next(c)
 		}

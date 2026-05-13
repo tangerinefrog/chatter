@@ -1,13 +1,17 @@
 package websockets
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Event struct {
 	Type      EventType `json:"type"`
 	Content   string    `json:"content"`
-	ChatID    int32     `json:"chat_id,omitempty"`
-	SenderID  int32     `json:"sender_id,omitempty"`
-	MessageID int64     `json:"message_id,omitempty"`
+	ChatID    uuid.UUID `json:"chat_id,omitempty"`
+	SenderID  uuid.UUID `json:"sender_id,omitempty"`
+	MessageID uuid.UUID `json:"message_id,omitempty"`
 	FromMe    bool      `json:"from_me,omitempty"`
 	ReadAt    time.Time `json:"read_at,omitempty"`
 }

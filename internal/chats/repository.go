@@ -8,6 +8,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tangerinefrog/chatter/internal/crypto"
@@ -28,13 +29,13 @@ func NewRepository(p *pgxpool.Pool, cipher *crypto.Cipher) *ChatsRepository {
 	}
 }
 
-func (r *ChatsRepository) Create(ctx context.Context, name string, chatType ChatType, userID int32, participantIDs []int32) (int32, error) {
+func (r *ChatsRepository) Create(ctx context.Context, name string, chatType ChatType, userID uuid.UUID, participantIDs []uuid.UUID) (uuid.UUID, error) {
 	if len(participantIDs) < 2 {
-		return 0, errors.New("chat should have at least 2 participants")
+		return uuid.Nil, errors.New("chat should have at least 2 participants")
 	}
 
 	if len(participantIDs) > 2 && chatType == ChatTypeDirect {
-		return 0, errors.New("direct chat can have only 2 participants")
+		return uuid.Nil, errors.New("direct chat can have only 2 participants")
 	}
 
 	var nameVal pgtype.Text
@@ -44,7 +45,7 @@ func (r *ChatsRepository) Create(ctx context.Context, name string, chatType Chat
 
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return 0, err
+		return uuid.Nil, err
 	}
 	defer tx.Rollback(ctx)
 
@@ -53,45 +54,45 @@ func (r *ChatsRepository) Create(ctx context.Context, name string, chatType Chat
 	chatID, err := qtx.CreateChat(ctx, db.CreateChatParams{
 		Type:      string(chatType),
 		Name:      nameVal,
-		CreatedBy: pgtype.Int4{Int32: userID, Valid: true},
+		CreatedBy: pgtype.UUID{Bytes: userID, Valid: true},
 	})
 
 	if err != nil {
-		return 0, err
+		return uuid.Nil, err
 	}
 
 	for _, id := range participantIDs {
-		err := qtx.CreateChatUser(ctx, db.CreateChatUserParams{ChatID: chatID, UserID: id})
+		err := qtx.CreateChatUser(ctx, db.CreateChatUserParams{ChatID: chatID, UserID: pgtype.UUID{Bytes: id, Valid: true}})
 		if err != nil {
-			return 0, err
+			return uuid.Nil, err
 		}
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		return 0, err
+		return uuid.Nil, err
 	}
 
-	return chatID, nil
+	return chatID.Bytes, nil
 }
 
-func (r *ChatsRepository) IsDirectChatExists(ctx context.Context, userID_1, userID_2 int32) (bool, error) {
+func (r *ChatsRepository) IsDirectChatExists(ctx context.Context, userID_1, userID_2 uuid.UUID) (bool, error) {
 	existingChatID, err := r.q.GetDirectChatBetweenUsers(ctx, db.GetDirectChatBetweenUsersParams{
-		UserID:   userID_1,
-		UserID_2: userID_2,
+		UserID:   pgtype.UUID{Bytes: userID_1, Valid: true},
+		UserID_2: pgtype.UUID{Bytes: userID_2, Valid: true},
 	})
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return false, errors.New("could not get direct chat between users")
 	}
-	if existingChatID != 0 {
+	if existingChatID.Bytes != uuid.Nil {
 		return true, nil
 	}
 
 	return false, nil
 }
 
-func (r *ChatsRepository) ListChatsForUser(ctx context.Context, userID int32) ([]Chat, error) {
-	chatRows, err := r.q.ListUserChats(ctx, pgtype.Int4{Int32: userID, Valid: true})
+func (r *ChatsRepository) ListChatsForUser(ctx context.Context, userID uuid.UUID) ([]Chat, error) {
+	chatRows, err := r.q.ListUserChats(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -135,7 +136,7 @@ func (r *ChatsRepository) ListChatsForUser(ctx context.Context, userID int32) ([
 		}
 
 		chats[i] = Chat{
-			ID:                  c.ID,
+			ID:                  c.ID.Bytes,
 			Type:                c.Type,
 			Name:                c.Name.String,
 			LastMessage:         lastMessage.Content,
@@ -149,8 +150,8 @@ func (r *ChatsRepository) ListChatsForUser(ctx context.Context, userID int32) ([
 	return chats, nil
 }
 
-func (r *ChatsRepository) ListUsersForChat(ctx context.Context, chatID int32) ([]*db.User, error) {
-	rows, err := r.q.ListChatUsers(ctx, chatID)
+func (r *ChatsRepository) ListUsersForChat(ctx context.Context, chatID uuid.UUID) ([]*db.User, error) {
+	rows, err := r.q.ListChatUsers(ctx, pgtype.UUID{Bytes: chatID, Valid: true})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil

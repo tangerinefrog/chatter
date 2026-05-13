@@ -26,14 +26,14 @@ RETURNING id
 `
 
 type CreateMessageParams struct {
-	ChatID  int32
-	UserID  pgtype.Int4
+	ChatID  pgtype.UUID
+	UserID  pgtype.UUID
 	Content string
 }
 
-func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (int64, error) {
+func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, createMessage, arg.ChatID, arg.UserID, arg.Content)
-	var id int64
+	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
 }
@@ -52,14 +52,14 @@ LIMIT $2 OFFSET $3
 `
 
 type ListTopNMessagesParams struct {
-	ChatID int32
+	ChatID pgtype.UUID
 	Limit  int32
 	Offset int32
 }
 
 type ListTopNMessagesRow struct {
-	ID        int64
-	UserID    pgtype.Int4
+	ID        pgtype.UUID
+	UserID    pgtype.UUID
 	Content   string
 	CreatedAt pgtype.Timestamptz
 	ReadAt    pgtype.Timestamptz
@@ -106,9 +106,9 @@ WHERE
 `
 
 type MarkMessagesAsReadParams struct {
-	ID     int64
-	ChatID int32
-	UserID pgtype.Int4
+	ID     pgtype.UUID
+	ChatID pgtype.UUID
+	UserID pgtype.UUID
 }
 
 func (q *Queries) MarkMessagesAsRead(ctx context.Context, arg MarkMessagesAsReadParams) error {

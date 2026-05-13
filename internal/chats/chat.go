@@ -2,21 +2,23 @@ package chats
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Chat struct {
-	ID                  int32
+	ID                  uuid.UUID
 	Type                string
 	Name                string
 	Participants        []ChatParticipant
 	LastMessage         string
 	LastMessageDate     time.Time
-	CreatedBy           int32
+	CreatedBy           uuid.UUID
 	CreatedAt           time.Time
 	UnreadMessagesCount int32
 }
 
 type ChatParticipant struct {
-	ID       int32  `json:"id"`
-	Username string `json:"username"`
+	ID       uuid.UUID `json:"id"`
+	Username string    `json:"username"`
 }

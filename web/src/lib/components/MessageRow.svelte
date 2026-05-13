@@ -10,6 +10,7 @@
 <div
     class="message-row {message.fromMe ? 'me' : 'them'}"
     data-message-id={message.id}
+    data-message-date={message.createdAt.toISOString()}
     data-read={message.readAt ? 'true' : 'false'}
 >
     <div class="bubble">

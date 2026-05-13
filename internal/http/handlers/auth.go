@@ -61,9 +61,9 @@ func (h *userHandler) SignUp(c *echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	token, expires, err := h.jwtManager.Generate(user.ID)
+	token, expires, err := h.jwtManager.Generate(user.ID.Bytes)
 	if err != nil {
-		h.logger.Error("Generating JWT for user failed", zap.Int32("user_id", user.ID), zap.Error(err))
+		h.logger.Error("Generating JWT for user failed", zap.String("user_id", user.ID.String()), zap.Error(err))
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -101,9 +101,9 @@ func (h *userHandler) Login(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid username or password")
 	}
 
-	token, expires, err := h.jwtManager.Generate(u.ID)
+	token, expires, err := h.jwtManager.Generate(u.ID.Bytes)
 	if err != nil {
-		h.logger.Error("Generating JWT for user failed", zap.Int32("user_id", u.ID), zap.Error(err))
+		h.logger.Error("Generating JWT for user failed", zap.String("user_id", u.ID.String()), zap.Error(err))
 		return c.NoContent(http.StatusInternalServerError)
 	}
 

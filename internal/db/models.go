@@ -9,30 +9,41 @@ import (
 )
 
 type Chat struct {
-	ID        int32
+	ID        pgtype.UUID
 	Type      string
 	Name      pgtype.Text
-	CreatedBy pgtype.Int4
+	CreatedBy pgtype.UUID
 	CreatedAt pgtype.Timestamptz
 }
 
 type ChatsUser struct {
-	ChatID    int32
-	UserID    int32
+	ChatID    pgtype.UUID
+	UserID    pgtype.UUID
 	CreatedAt pgtype.Timestamptz
 }
 
+type File struct {
+	ID         pgtype.UUID
+	ChatID     pgtype.UUID
+	UploaderID pgtype.UUID
+	FileKey    string
+	FileName   string
+	MimeType   string
+	SizeBytes  int64
+	UpdatedAt  pgtype.Timestamptz
+}
+
 type Message struct {
-	ID        int64
-	ChatID    int32
-	UserID    pgtype.Int4
+	ID        pgtype.UUID
+	ChatID    pgtype.UUID
+	UserID    pgtype.UUID
 	Content   string
 	CreatedAt pgtype.Timestamptz
 	ReadAt    pgtype.Timestamptz
 }
 
 type User struct {
-	ID           int32
+	ID           pgtype.UUID
 	Username     string
 	PasswordHash string
 	CreatedAt    pgtype.Timestamptz

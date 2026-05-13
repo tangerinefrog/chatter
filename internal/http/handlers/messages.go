@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/tangerinefrog/chatter/internal/http/dto"
 	"github.com/tangerinefrog/chatter/internal/messages"
@@ -31,19 +32,19 @@ func (h *messagesHandler) ListChatMessages(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "incorrect page number parameter")
 	}
 
-	userID, ok := c.Get("user_id").(int32)
+	userID, ok := c.Get("user_id").(uuid.UUID)
 	if !ok {
 		return c.NoContent(http.StatusUnauthorized)
 	}
 
-	chatID, ok := c.Get("chat_id").(int32)
+	chatID, ok := c.Get("chat_id").(uuid.UUID)
 	if !ok {
 		return c.NoContent(http.StatusNotFound)
 	}
 
 	dbMessages, err := h.messagesRepo.ListChatMessages(c.Request().Context(), chatID, int32(page))
 	if err != nil {
-		h.logger.Error("Could not load messages for chat from DB", zap.Int32("ChatID", chatID), zap.Error(err))
+		h.logger.Error("Could not load messages for chat from DB", zap.String("ChatID", chatID.String()), zap.Error(err))
 		return echo.NewHTTPError(http.StatusBadRequest, "could not load chat messages")
 	}
 
@@ -57,10 +58,10 @@ func (h *messagesHandler) ListChatMessages(c *echo.Context) error {
 			readAt = &t
 		}
 		messages[i] = dto.Message{
-			ID:        m.ID,
+			ID:        m.ID.String(),
 			Content:   m.Content,
 			FromMe:    m.UserID == userID,
-			UserID:    m.UserID,
+			UserID:    m.UserID.String(),
 			CreatedAt: m.CreatedAt.UTC(),
 			ReadAt:    readAt,
 		}
@@ -76,4 +77,3 @@ func (h *messagesHandler) ListChatMessages(c *echo.Context) error {
 
 	return c.JSON(http.StatusCreated, resp)
 }
-

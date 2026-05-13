@@ -65,7 +65,7 @@ export async function getChats(): Promise<ChatsResponse> {
     return apiFetch<ChatsResponse>('/chats');
 }
 
-export async function getMessages(chatId: number, page: number): Promise<MessagesResponse> {
+export async function getMessages(chatId: string, page: number): Promise<MessagesResponse> {
     return apiFetch<MessagesResponse>(`/chats/${chatId}/messages?page=${page}`);
 }
 

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type JwtManager struct {
@@ -14,7 +15,7 @@ type JwtManager struct {
 
 type Claims struct {
 	jwt.RegisteredClaims
-	UserId int32 `json:"user_id"`
+	UserId uuid.UUID `json:"user_id"`
 }
 
 func NewJwtManager(secret string, ttl time.Duration) *JwtManager {
@@ -25,7 +26,7 @@ func NewJwtManager(secret string, ttl time.Duration) *JwtManager {
 	}
 }
 
-func (m *JwtManager) Generate(userId int32) (string, time.Time, error) {
+func (m *JwtManager) Generate(userId uuid.UUID) (string, time.Time, error) {
 	now := time.Now()
 	expires := now.Add(m.ttl)
 
