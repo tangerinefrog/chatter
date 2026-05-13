@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"time"
@@ -122,11 +123,15 @@ func (r *ChatsRepository) ListChatsForUser(ctx context.Context, userID int32) ([
 		}
 
 		if lastMessage.Content != "" {
-			contentDecrypted, err := r.cipher.Decrypt(lastMessage.Content)
+			contentBytes, err := base64.StdEncoding.DecodeString(lastMessage.Content)
 			if err != nil {
 				return nil, err
 			}
-			lastMessage.Content = contentDecrypted
+			contentDecrypted, err := r.cipher.Decrypt(contentBytes)
+			if err != nil {
+				return nil, err
+			}
+			lastMessage.Content = string(contentDecrypted)
 		}
 
 		chats[i] = Chat{

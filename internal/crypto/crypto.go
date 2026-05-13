@@ -4,8 +4,8 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 )
 
@@ -31,27 +31,22 @@ func NewCipher(key []byte) (*Cipher, error) {
 	return &Cipher{gcm: gcm}, nil
 }
 
-func (c *Cipher) Encrypt(plaintext string) (string, error) {
+func (c *Cipher) Encrypt(plaintext []byte) ([]byte, error) {
 	nonce := make([]byte, c.gcm.NonceSize())
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return "", err
+		return nil, fmt.Errorf("failed to encrypt content: %w", err)
 	}
-	sealed := c.gcm.Seal(nonce, nonce, []byte(plaintext), nil)
-	return base64.StdEncoding.EncodeToString(sealed), nil
+	return c.gcm.Seal(nonce, nonce, plaintext, nil), nil
 }
 
-func (c *Cipher) Decrypt(encoded string) (string, error) {
-	data, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		return "", errors.New("invalid base64")
-	}
+func (c *Cipher) Decrypt(data []byte) ([]byte, error) {
 	nonceSize := c.gcm.NonceSize()
 	if len(data) < nonceSize {
-		return "", errors.New("ciphertext too short")
+		return nil, errors.New("ciphertext too short")
 	}
 	plaintext, err := c.gcm.Open(nil, data[:nonceSize], data[nonceSize:], nil)
 	if err != nil {
-		return "", errors.New("decryption failed")
+		return nil, fmt.Errorf("decryption failed: %w", err)
 	}
-	return string(plaintext), nil
+	return plaintext, nil
 }

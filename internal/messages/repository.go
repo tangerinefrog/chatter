@@ -3,6 +3,7 @@ package messages
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"time"
 
@@ -32,12 +33,15 @@ func (r *MessagesRepository) CreateMessage(
 	chatID int32,
 	content string,
 ) (int64, error) {
-	contentEncrypted, err := r.cipher.Encrypt(content)
+	encryptedBytes, err := r.cipher.Encrypt([]byte(content))
+	if err != nil {
+		return 0, err
+	}
 
 	id, err := r.q.CreateMessage(ctx, db.CreateMessageParams{
 		ChatID:  chatID,
 		UserID:  pgtype.Int4{Int32: userID, Valid: true},
-		Content: contentEncrypted,
+		Content: base64.StdEncoding.EncodeToString(encryptedBytes),
 	})
 
 	if err != nil {
@@ -84,7 +88,12 @@ func (r *MessagesRepository) ListChatMessages(
 			readAt = &m.ReadAt.Time
 		}
 
-		contentDecrypted, err := r.cipher.Decrypt(m.Content)
+		contentBytes, err := base64.StdEncoding.DecodeString(m.Content)
+		if err != nil {
+			return nil, err
+		}
+
+		contentDecrypted, err := r.cipher.Decrypt(contentBytes)
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +101,7 @@ func (r *MessagesRepository) ListChatMessages(
 			ID:        m.ID,
 			UserID:    userID,
 			ChatID:    chatID,
-			Content:   contentDecrypted,
+			Content:   string(contentDecrypted),
 			CreatedAt: m.CreatedAt.Time,
 			ReadAt:    readAt,
 		}
