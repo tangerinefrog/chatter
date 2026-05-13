@@ -14,6 +14,7 @@ import (
 	"github.com/tangerinefrog/chatter/internal/http/validator"
 	"github.com/tangerinefrog/chatter/internal/http/websockets"
 	"github.com/tangerinefrog/chatter/internal/messages"
+	"github.com/tangerinefrog/chatter/internal/storage"
 	"github.com/tangerinefrog/chatter/internal/users"
 	"go.uber.org/zap"
 )
@@ -27,6 +28,7 @@ type Server struct {
 	messagesRepo *messages.MessagesRepository
 	jwtManager   *jwt.JwtManager
 	hub          *websockets.Hub
+	fileStorage  storage.FileStorage
 }
 
 func NewServer(
@@ -37,6 +39,7 @@ func NewServer(
 	messagesRepo *messages.MessagesRepository,
 	jwtManager *jwt.JwtManager,
 	hub *websockets.Hub,
+	fileStorage storage.FileStorage,
 ) *Server {
 	e := echo.New()
 
@@ -64,6 +67,7 @@ func NewServer(
 		messagesRepo: messagesRepo,
 		jwtManager:   jwtManager,
 		hub:          hub,
+		fileStorage:  fileStorage,
 	}
 
 	s.registerRoutes()
@@ -102,6 +106,10 @@ func (s *Server) registerRoutes() {
 	messages := chats.Group("/:chatID/messages")
 	messages.Use(mw.Chat())
 	messages.GET("", messagesHandler.ListChatMessages)
+
+	files := api.Group("/files")
+	files.Use(mw.Auth(s.jwtManager))
+	files.POST("/upload", handlers.NewFileHandler(s.fileStorage, s.logger).UploadFile)
 
 	websocketsHandler := handlers.NewWebsocketsHandler(s.hub, s.logger)
 	websocket := s.echo.Group("/ws")

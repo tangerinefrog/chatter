@@ -18,6 +18,7 @@ import (
 	"github.com/tangerinefrog/chatter/internal/http/server"
 	"github.com/tangerinefrog/chatter/internal/http/websockets"
 	"github.com/tangerinefrog/chatter/internal/messages"
+	"github.com/tangerinefrog/chatter/internal/storage"
 	"github.com/tangerinefrog/chatter/internal/users"
 	"github.com/tangerinefrog/chatter/sql"
 	"go.uber.org/zap"
@@ -28,6 +29,11 @@ type config struct {
 	serverAddr    string
 	jwtSecret     string
 	encryptionKey []byte
+	s3Endpoint    string
+	s3Bucket      string
+	s3Region      string
+	s3Username    string
+	s3Password    string
 }
 
 func main() {
@@ -65,11 +71,25 @@ func run(logger *zap.Logger) error {
 	chatsRepo := chats.NewRepository(pool, cipher)
 	messagesRepo := messages.NewRepository(pool, cipher)
 
+	s3Storage, err := storage.NewS3Storage(cfg.s3Endpoint, cfg.s3Bucket, cfg.s3Region, cfg.s3Username, cfg.s3Password)
+	if err != nil {
+		return fmt.Errorf("failed to initialize S3 storage: %w", err)
+	}
+
 	hub := websockets.NewHub(chatsRepo, messagesRepo, logger)
 	go hub.Run()
 
 	jwtManager := jwt.NewJwtManager(cfg.jwtSecret, 1*time.Hour)
-	srv := server.NewServer(cfg.serverAddr, logger, usersRepo, chatsRepo, messagesRepo, jwtManager, hub)
+	srv := server.NewServer(
+		cfg.serverAddr,
+		logger,
+		usersRepo,
+		chatsRepo,
+		messagesRepo,
+		jwtManager,
+		hub,
+		s3Storage,
+	)
 
 	err = srv.Start(ctx)
 	if err != nil {
@@ -100,6 +120,11 @@ func loadConfig() (*config, error) {
 		dbConn:        os.Getenv("DB_CONN"),
 		serverAddr:    os.Getenv("SRV_ADDR"),
 		jwtSecret:     os.Getenv("JWT_SECRET"),
+		s3Endpoint:    os.Getenv("S3_ENDPOINT"),
+		s3Bucket:      os.Getenv("S3_BUCKET"),
+		s3Region:      os.Getenv("S3_REGION"),
+		s3Username:    os.Getenv("S3_USERNAME"),
+		s3Password:    os.Getenv("S3_PASSWORD"),
 		encryptionKey: encryptionKey,
 	}
 
@@ -115,6 +140,21 @@ func loadConfig() (*config, error) {
 	}
 	if len(cfg.encryptionKey) == 0 {
 		missing = append(missing, "ENCRYPTION_KEY")
+	}
+	if cfg.s3Endpoint == "" {
+		missing = append(missing, "S3_ENDPOINT")
+	}
+	if cfg.s3Bucket == "" {
+		missing = append(missing, "S3_BUCKET")
+	}
+	if cfg.s3Region == "" {
+		missing = append(missing, "S3_REGION")
+	}
+	if cfg.s3Username == "" {
+		missing = append(missing, "S3_USERNAME")
+	}
+	if cfg.s3Password == "" {
+		missing = append(missing, "S3_PASSWORD")
 	}
 
 	if len(missing) > 0 {
