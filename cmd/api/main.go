@@ -15,6 +15,7 @@ import (
 	"github.com/tangerinefrog/chatter/internal/auth/jwt"
 	"github.com/tangerinefrog/chatter/internal/chats"
 	"github.com/tangerinefrog/chatter/internal/crypto"
+	"github.com/tangerinefrog/chatter/internal/files"
 	"github.com/tangerinefrog/chatter/internal/http/server"
 	"github.com/tangerinefrog/chatter/internal/http/websockets"
 	"github.com/tangerinefrog/chatter/internal/messages"
@@ -70,11 +71,14 @@ func run(logger *zap.Logger) error {
 	usersRepo := users.NewRepository(pool)
 	chatsRepo := chats.NewRepository(pool, cipher)
 	messagesRepo := messages.NewRepository(pool, cipher)
+	filesRepo := files.NewRepository(pool)
 
 	s3Storage, err := storage.NewS3Storage(cfg.s3Endpoint, cfg.s3Bucket, cfg.s3Region, cfg.s3Username, cfg.s3Password)
 	if err != nil {
 		return fmt.Errorf("failed to initialize S3 storage: %w", err)
 	}
+
+	filesService := files.NewFileService(filesRepo, s3Storage, cipher)
 
 	hub := websockets.NewHub(chatsRepo, messagesRepo, logger)
 	go hub.Run()
@@ -88,7 +92,7 @@ func run(logger *zap.Logger) error {
 		messagesRepo,
 		jwtManager,
 		hub,
-		s3Storage,
+		filesService,
 	)
 
 	err = srv.Start(ctx)

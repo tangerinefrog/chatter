@@ -29,7 +29,7 @@ func NewRepository(p *pgxpool.Pool, cipher *crypto.Cipher) *ChatsRepository {
 	}
 }
 
-func (r *ChatsRepository) Create(ctx context.Context, name string, chatType ChatType, userID uuid.UUID, participantIDs []uuid.UUID) (uuid.UUID, error) {
+func (r *ChatsRepository) CreateChat(ctx context.Context, name string, chatType ChatType, userID uuid.UUID, participantIDs []uuid.UUID) (uuid.UUID, error) {
 	if len(participantIDs) < 2 {
 		return uuid.Nil, errors.New("chat should have at least 2 participants")
 	}
