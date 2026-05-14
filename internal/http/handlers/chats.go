@@ -79,7 +79,7 @@ func (h *chatsHandler) CreateChat(c *echo.Context) error {
 		chatType = chats.ChatTypeGroup
 	}
 
-	chatID, err := h.chatsRepo.Create(c.Request().Context(), req.Name, chatType, userID, userIDs)
+	chatID, err := h.chatsRepo.CreateChat(c.Request().Context(), req.Name, chatType, userID, userIDs)
 	if err != nil {
 		h.logger.Error("Could not create chat between users", zap.String("UserID", userID.String()), zap.Error(err))
 		return echo.NewHTTPError(http.StatusBadRequest, "could not create chat")

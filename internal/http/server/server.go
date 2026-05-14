@@ -9,12 +9,12 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 	"github.com/tangerinefrog/chatter/internal/auth/jwt"
 	"github.com/tangerinefrog/chatter/internal/chats"
+	"github.com/tangerinefrog/chatter/internal/files"
 	"github.com/tangerinefrog/chatter/internal/http/handlers"
 	mw "github.com/tangerinefrog/chatter/internal/http/middleware"
 	"github.com/tangerinefrog/chatter/internal/http/validator"
 	"github.com/tangerinefrog/chatter/internal/http/websockets"
 	"github.com/tangerinefrog/chatter/internal/messages"
-	"github.com/tangerinefrog/chatter/internal/storage"
 	"github.com/tangerinefrog/chatter/internal/users"
 	"go.uber.org/zap"
 )
@@ -28,7 +28,7 @@ type Server struct {
 	messagesRepo *messages.MessagesRepository
 	jwtManager   *jwt.JwtManager
 	hub          *websockets.Hub
-	fileStorage  storage.FileStorage
+	fileService  *files.FileService
 }
 
 func NewServer(
@@ -39,7 +39,7 @@ func NewServer(
 	messagesRepo *messages.MessagesRepository,
 	jwtManager *jwt.JwtManager,
 	hub *websockets.Hub,
-	fileStorage storage.FileStorage,
+	fileService *files.FileService,
 ) *Server {
 	e := echo.New()
 
@@ -67,7 +67,7 @@ func NewServer(
 		messagesRepo: messagesRepo,
 		jwtManager:   jwtManager,
 		hub:          hub,
-		fileStorage:  fileStorage,
+		fileService:  fileService,
 	}
 
 	s.registerRoutes()
@@ -107,9 +107,12 @@ func (s *Server) registerRoutes() {
 	messages.Use(mw.Chat())
 	messages.GET("", messagesHandler.ListChatMessages)
 
-	files := api.Group("/files")
-	files.Use(mw.Auth(s.jwtManager))
-	files.POST("/upload", handlers.NewFileHandler(s.fileStorage, s.logger).UploadFile)
+	filesHandler := handlers.NewFileHandler(s.fileService, s.logger)
+	files := chats.Group("/:chatID/files")
+	files.Use(mw.Chat())
+	files.POST("", filesHandler.UploadFile)
+	files.GET("/:fileID", filesHandler.DownloadFile)
+	files.DELETE("/:fileID", filesHandler.DeleteFile)
 
 	websocketsHandler := handlers.NewWebsocketsHandler(s.hub, s.logger)
 	websocket := s.echo.Group("/ws")
