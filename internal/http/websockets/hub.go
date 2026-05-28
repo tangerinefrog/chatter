@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/tangerinefrog/chatter/internal/chats"
+	"github.com/tangerinefrog/chatter/internal/files"
 	"github.com/tangerinefrog/chatter/internal/messages"
 	"go.uber.org/zap"
 )
@@ -20,10 +21,11 @@ type Hub struct {
 	events       chan Event
 	chatsRepo    *chats.ChatsRepository
 	messagesRepo *messages.MessagesRepository
+	filesRepo    *files.FilesRepository
 	logger       *zap.Logger
 }
 
-func NewHub(chatsRepo *chats.ChatsRepository, messagesRepo *messages.MessagesRepository, logger *zap.Logger) *Hub {
+func NewHub(chatsRepo *chats.ChatsRepository, messagesRepo *messages.MessagesRepository, filesRepo *files.FilesRepository, logger *zap.Logger) *Hub {
 	return &Hub{
 		clients:      make(map[uuid.UUID]*Client),
 		register:     make(chan *Client),
@@ -31,6 +33,7 @@ func NewHub(chatsRepo *chats.ChatsRepository, messagesRepo *messages.MessagesRep
 		events:       make(chan Event),
 		chatsRepo:    chatsRepo,
 		messagesRepo: messagesRepo,
+		filesRepo:    filesRepo,
 		logger:       logger,
 	}
 }
@@ -74,13 +77,13 @@ func (h *Hub) Shutdown() {
 func (h *Hub) handleEvent(e Event) {
 	switch e.Type {
 	case EventSendMessage:
-		h.handleNewMessage(e.ChatID, e.SenderID, e.Content)
+		h.handleNewMessage(e.ChatID, e.SenderID, e.Content, e.FileID)
 	case EventReadMessage:
 		h.handleReadMessage(e.ChatID, e.SenderID, e.MessageID)
 	}
 }
 
-func (h *Hub) handleNewMessage(chatID uuid.UUID, senderID uuid.UUID, message string) {
+func (h *Hub) handleNewMessage(chatID uuid.UUID, senderID uuid.UUID, message string, fileID uuid.UUID) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
@@ -88,6 +91,14 @@ func (h *Hub) handleNewMessage(chatID uuid.UUID, senderID uuid.UUID, message str
 	if err != nil {
 		h.logger.Error("Could not save message to DB", zap.String("ChatID", chatID.String()), zap.String("UserID", senderID.String()), zap.Error(err))
 		return
+	}
+
+	if fileID != uuid.Nil {
+		err := h.filesRepo.LinkFileToMessage(ctx, fileID, id)		
+		if err != nil {
+			h.logger.Error("Could not link file to message", zap.String("FileID", fileID.String()), zap.String("MessageID", id.String()), zap.Error(err))
+			return
+		}
 	}
 
 	chatUsers, err := h.chatsRepo.ListUsersForChat(ctx, chatID)
@@ -108,6 +119,7 @@ func (h *Hub) handleNewMessage(chatID uuid.UUID, senderID uuid.UUID, message str
 				SenderID:  senderID,
 				ChatID:    chatID,
 				MessageID: id,
+				FileID:    fileID,
 				FromMe:    u.ID.Bytes == senderID,
 			}
 			h.sendMessageToClient(msg, client)

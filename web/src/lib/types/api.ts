@@ -25,6 +25,11 @@ export interface MessagesResponse {
     messages: ApiMessage[];
 }
 
+export interface UploadFileResponse {
+    id: string;
+    url: string;
+}
+
 export interface CreateChatRequest {
     is_direct: boolean;
     participant_usernames: string[];

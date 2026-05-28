@@ -31,6 +31,7 @@ type File struct {
 	MimeType   string
 	SizeBytes  int64
 	UpdatedAt  pgtype.Timestamptz
+	MessageID  pgtype.UUID
 }
 
 type Message struct {

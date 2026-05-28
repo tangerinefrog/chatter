@@ -4,4 +4,5 @@ export type Message = {
     text: string;
     createdAt: Date;
     readAt: Date | null;
+    fileId?: string | null;
 };

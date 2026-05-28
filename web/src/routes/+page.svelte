@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Chat } from '$lib/models/chat';
     import type { Message } from '$lib/models/message';
-    import { getChats, getMessages, createChat } from '$lib/api/client';
+    import { getChats, getMessages, createChat, uploadChatFile } from '$lib/api/client';
     import { connect, disconnect, sendEvent, setOnNewMessageCallback } from '$lib/websocket/client';
     import { onMount, tick } from 'svelte';
     import { setMessages, messagesStore } from '$lib/stores/messages';
@@ -29,6 +29,7 @@
     let error: string | null = null;
     let messagesContainer: HTMLDivElement;
     let chatInput: { focusInput?: () => void } | null = null;
+    let currentAttachment: File | null = null;
     let chatPages: Record<string, number> = {};
     let chatHasMore: Record<string, boolean> = {};
 
@@ -179,20 +180,39 @@
         }
     }
 
-    async function sendMessage() {
+    async function sendMessage(file?: File | null) {
         const messageClean = currentMessage.trim();
 
-        if (!messageClean || !currentChat?.id) {
+        if (!messageClean && !file) {
             return;
+        }
+
+        if (!currentChat?.id) {
+            return;
+        }
+
+        let fileId: string | undefined;
+
+        if (file) {
+            try {
+                const uploaded = await uploadChatFile(currentChat.id, file);
+                fileId = uploaded.id;
+            } catch (err) {
+                const apiError = err as ApiError;
+                error = apiError.message || 'Failed to upload attachment';
+                return;
+            }
         }
 
         sendEvent({
             type: 'send_message',
             chat_id: currentChat.id,
-            content: messageClean
+            content: messageClean || '',
+            file_id: fileId
         });
 
         currentMessage = '';
+        currentAttachment = null;
     }
 
     async function handleMessagesScroll() {
@@ -365,17 +385,18 @@
                     <div class="empty-state">No messages yet. Start the conversation!</div>
                 {:else}
                     {#each messages as msg, index}
-                    {#if index === 0 || !isSameDay(messages[index - 1].createdAt, msg.createdAt)}
-                        <div class="message-date-divider">{formatDateShort(msg.createdAt)}</div>
-                    {/if}
-                    <MessageRow message={msg} />
-                {/each}
-            {/if}
+                        {#if index === 0 || !isSameDay(messages[index - 1].createdAt, msg.createdAt)}
+                            <div class="message-date-divider">{formatDateShort(msg.createdAt)}</div>
+                        {/if}
+                        <MessageRow message={msg} />
+                    {/each}
+                {/if}
             </div>
 
             <ChatInput
                 bind:this={chatInput}
                 bind:value={currentMessage}
+                bind:attachedFile={currentAttachment}
                 disabled={!currentChat}
                 onSend={sendMessage}
             />

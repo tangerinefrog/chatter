@@ -80,7 +80,7 @@ func run(logger *zap.Logger) error {
 
 	filesService := files.NewFileService(filesRepo, s3Storage, cipher)
 
-	hub := websockets.NewHub(chatsRepo, messagesRepo, logger)
+	hub := websockets.NewHub(chatsRepo, messagesRepo, filesRepo, logger)
 	go hub.Run()
 
 	jwtManager := jwt.NewJwtManager(cfg.jwtSecret, 1*time.Hour)

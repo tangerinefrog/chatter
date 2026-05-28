@@ -1,4 +1,4 @@
-import type { ChatsResponse, MessagesResponse, CreateChatRequest, AuthRequest, AuthResponse } from '$lib/types/api';
+import type { ChatsResponse, MessagesResponse, UploadFileResponse, CreateChatRequest, AuthRequest, AuthResponse } from '$lib/types/api';
 const API_URL = `http://${import.meta.env.VITE_API_ADDR}/api`;
 
 export interface ApiError extends Error {
@@ -25,7 +25,7 @@ export async function apiFetch<T = unknown>(
 ): Promise<T> {
     const url = `${API_URL}${path}`;
     const headers = {
-        'Content-Type': 'application/json',
+        ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         ...options.headers
     };
 
@@ -76,7 +76,15 @@ export async function createChat(request: CreateChatRequest): Promise<void> {
 export async function login(request: AuthRequest): Promise<AuthResponse> {
     return postJson<AuthResponse>('/auth/login', request);
 }
+export async function uploadChatFile(chatId: string, file: File): Promise<UploadFileResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
 
+    return apiFetch<UploadFileResponse>(`/chats/${chatId}/files`, {
+        method: 'POST',
+        body: formData,
+    });
+}
 export async function signup(request: AuthRequest): Promise<AuthResponse> {
     return postJson<AuthResponse>('/auth/signup', request);
 }

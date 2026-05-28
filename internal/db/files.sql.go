@@ -19,9 +19,10 @@ INSERT INTO files (
     file_key,
     file_name,
     mime_type,
-    size_bytes
+    size_bytes,
+    message_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5, $6, $7, $8
 )
 `
 
@@ -33,6 +34,7 @@ type CreateFileParams struct {
 	FileName   string
 	MimeType   string
 	SizeBytes  int64
+	MessageID  pgtype.UUID
 }
 
 func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) error {
@@ -44,6 +46,7 @@ func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) error {
 		arg.FileName,
 		arg.MimeType,
 		arg.SizeBytes,
+		arg.MessageID,
 	)
 	return err
 }
@@ -72,9 +75,20 @@ FROM files
 WHERE id = $1
 `
 
-func (q *Queries) GetFileByID(ctx context.Context, id pgtype.UUID) (File, error) {
+type GetFileByIDRow struct {
+	ID         pgtype.UUID
+	ChatID     pgtype.UUID
+	UploaderID pgtype.UUID
+	FileKey    string
+	FileName   string
+	MimeType   string
+	SizeBytes  int64
+	UpdatedAt  pgtype.Timestamptz
+}
+
+func (q *Queries) GetFileByID(ctx context.Context, id pgtype.UUID) (GetFileByIDRow, error) {
 	row := q.db.QueryRow(ctx, getFileByID, id)
-	var i File
+	var i GetFileByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.ChatID,
@@ -86,4 +100,20 @@ func (q *Queries) GetFileByID(ctx context.Context, id pgtype.UUID) (File, error)
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const linkFileToMessage = `-- name: LinkFileToMessage :exec
+UPDATE files
+SET message_id = $2
+WHERE id = $1
+`
+
+type LinkFileToMessageParams struct {
+	ID        pgtype.UUID
+	MessageID pgtype.UUID
+}
+
+func (q *Queries) LinkFileToMessage(ctx context.Context, arg LinkFileToMessageParams) error {
+	_, err := q.db.Exec(ctx, linkFileToMessage, arg.ID, arg.MessageID)
+	return err
 }

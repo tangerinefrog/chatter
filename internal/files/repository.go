@@ -53,3 +53,10 @@ func (r *FilesRepository) GetFileByID(ctx context.Context, fileID uuid.UUID) (Fi
 func (r *FilesRepository) DeleteFile(ctx context.Context, fileID uuid.UUID) error {
 	return r.q.DeleteFile(ctx, pgtype.UUID{Bytes: fileID, Valid: true})
 }
+
+func (r *FilesRepository) LinkFileToMessage(ctx context.Context, fileID uuid.UUID, messageID uuid.UUID) error {
+	return r.q.LinkFileToMessage(ctx, db.LinkFileToMessageParams{
+		ID:        pgtype.UUID{Bytes: fileID, Valid: true},
+		MessageID: pgtype.UUID{Bytes: messageID, Valid: true},
+	})
+}
