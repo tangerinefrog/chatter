@@ -26,10 +26,15 @@ export function markSentMessagesAsRead(chatId: string, lastMessageId: string, re
         const msgs = store[chatId];
         if (!msgs) return store;
 
+        const lastIndex = msgs.findIndex((msg) => msg.id === lastMessageId);
+        if (lastIndex === -1) {
+            return store;
+        }
+
         return {
             ...store,
-            [chatId]: msgs.map(msg =>
-                msg.id <= lastMessageId && msg.fromMe && !msg.readAt
+            [chatId]: msgs.map((msg, index) =>
+                index <= lastIndex && msg.fromMe && !msg.readAt
                     ? { ...msg, readAt }
                     : msg
             )
