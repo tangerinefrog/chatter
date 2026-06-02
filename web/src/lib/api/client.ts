@@ -88,3 +88,7 @@ export async function uploadChatFile(chatId: string, file: File): Promise<Upload
 export async function signup(request: AuthRequest): Promise<AuthResponse> {
     return postJson<AuthResponse>('/auth/signup', request);
 }
+
+export function getFileUrl(chatId: string, fileId: string): string {
+    return `${API_URL}/chats/${chatId}/files/${fileId}`;
+}

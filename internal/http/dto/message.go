@@ -20,10 +20,18 @@ type ListChatMessagesResponse struct {
 }
 
 type Message struct {
-	ID        string     `json:"id"`
-	Content   string     `json:"content"`
-	FromMe    bool       `json:"from_me"`
-	UserID    string     `json:"user_id"`
-	CreatedAt time.Time  `json:"created_at"`
-	ReadAt    *time.Time `json:"read_at"`
+	ID           string        `json:"id"`
+	Content      string        `json:"content"`
+	FromMe       bool          `json:"from_me"`
+	UserID       string        `json:"user_id"`
+	CreatedAt    time.Time     `json:"created_at"`
+	ReadAt       *time.Time    `json:"read_at"`
+	MessageFiles []MessageFile `json:"files,omitempty"`
+}
+
+type MessageFile struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	MimeType  string `json:"mime_type"`
+	SizeBytes int64  `json:"size_bytes"`
 }

@@ -17,10 +17,23 @@ SELECT
     m.user_id,
     m.content,
     m.created_at,
-    m.read_at
+    m.read_at,
+    (
+        SELECT json_agg(row_to_json(t))
+        FROM (
+            SELECT  
+                f.id,
+                f.file_key,
+                f.file_name,
+                f.mime_type,
+                f.size_bytes
+            FROM files f
+            WHERE f.message_id = m.id
+        ) t
+    ) files_json
 FROM messages m
 WHERE m.chat_id = $1
-ORDER BY m.created_at DESC
+ORDER BY m.created_at
 LIMIT $2 OFFSET $3;
 
 -- name: MarkMessagesAsRead :exec

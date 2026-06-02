@@ -4,5 +4,12 @@ export type Message = {
     text: string;
     createdAt: Date;
     readAt: Date | null;
-    fileId?: string | null;
+    files?: MessageFile[];
+};
+
+export type MessageFile = {
+    id: string;
+    name: string;
+    mimeType: string;
+    sizeBytes: number;
 };

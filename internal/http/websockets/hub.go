@@ -77,13 +77,13 @@ func (h *Hub) Shutdown() {
 func (h *Hub) handleEvent(e Event) {
 	switch e.Type {
 	case EventSendMessage:
-		h.handleNewMessage(e.ChatID, e.SenderID, e.Content, e.FileID)
+		h.handleNewMessage(e.ChatID, e.SenderID, e.Content, e.FileIDs)
 	case EventReadMessage:
 		h.handleReadMessage(e.ChatID, e.SenderID, e.MessageID)
 	}
 }
 
-func (h *Hub) handleNewMessage(chatID uuid.UUID, senderID uuid.UUID, message string, fileID uuid.UUID) {
+func (h *Hub) handleNewMessage(chatID uuid.UUID, senderID uuid.UUID, message string, fileIDs []uuid.UUID) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
@@ -93,11 +93,27 @@ func (h *Hub) handleNewMessage(chatID uuid.UUID, senderID uuid.UUID, message str
 		return
 	}
 
-	if fileID != uuid.Nil {
-		err := h.filesRepo.LinkFileToMessage(ctx, fileID, id)		
-		if err != nil {
-			h.logger.Error("Could not link file to message", zap.String("FileID", fileID.String()), zap.String("MessageID", id.String()), zap.Error(err))
-			return
+	var fileInfos []FileInfo
+	for _, fileID := range fileIDs {
+		if fileID != uuid.Nil {
+			err := h.filesRepo.LinkFileToMessage(ctx, fileID, id)
+			if err != nil {
+				h.logger.Error("Could not link file to message", zap.String("FileID", fileID.String()), zap.String("MessageID", id.String()), zap.Error(err))
+				continue
+			}
+
+			file, err := h.filesRepo.GetFileByID(ctx, fileID)
+			if err != nil {
+				h.logger.Error("Could not get file details", zap.String("FileID", fileID.String()), zap.Error(err))
+				continue
+			}
+
+			fileInfos = append(fileInfos, FileInfo{
+				ID:        file.ID.String(),
+				Name:      file.FileName,
+				MimeType:  file.MimeType,
+				SizeBytes: file.SizeBytes,
+			})
 		}
 	}
 
@@ -119,7 +135,7 @@ func (h *Hub) handleNewMessage(chatID uuid.UUID, senderID uuid.UUID, message str
 				SenderID:  senderID,
 				ChatID:    chatID,
 				MessageID: id,
-				FileID:    fileID,
+				Files:     fileInfos,
 				FromMe:    u.ID.Bytes == senderID,
 			}
 			h.sendMessageToClient(msg, client)

@@ -44,10 +44,23 @@ SELECT
     m.user_id,
     m.content,
     m.created_at,
-    m.read_at
+    m.read_at,
+    (
+        SELECT json_agg(row_to_json(t))
+        FROM (
+            SELECT  
+                f.id,
+                f.file_key,
+                f.file_name,
+                f.mime_type,
+                f.size_bytes
+            FROM files f
+            WHERE f.message_id = m.id
+        ) t
+    ) files_json
 FROM messages m
 WHERE m.chat_id = $1
-ORDER BY m.created_at DESC
+ORDER BY m.created_at
 LIMIT $2 OFFSET $3
 `
 
@@ -63,6 +76,7 @@ type ListTopNMessagesRow struct {
 	Content   string
 	CreatedAt pgtype.Timestamptz
 	ReadAt    pgtype.Timestamptz
+	FilesJson []byte
 }
 
 func (q *Queries) ListTopNMessages(ctx context.Context, arg ListTopNMessagesParams) ([]ListTopNMessagesRow, error) {
@@ -80,6 +94,7 @@ func (q *Queries) ListTopNMessages(ctx context.Context, arg ListTopNMessagesPara
 			&i.Content,
 			&i.CreatedAt,
 			&i.ReadAt,
+			&i.FilesJson,
 		); err != nil {
 			return nil, err
 		}
@@ -101,8 +116,8 @@ WHERE
     m.user_id != $3
     AND 
     m.read_at IS NULL
-	AND
-	m.created_at <= (SELECT created_at FROM messages WHERE messages.id = $1)
+    AND
+    m.created_at <= (SELECT created_at FROM messages WHERE messages.id = $1)
 `
 
 type MarkMessagesAsReadParams struct {

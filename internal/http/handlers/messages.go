@@ -56,13 +56,24 @@ func (h *messagesHandler) ListChatMessages(c *echo.Context) error {
 			t := (*m.ReadAt).UTC()
 			readAt = &t
 		}
+		messageFiles := make([]dto.MessageFile, len(m.Files))
+		for j, f := range m.Files {
+			messageFiles[j] = dto.MessageFile{
+				ID:        f.ID.String(),
+				Name:      f.FileName,
+				MimeType:  f.MimeType,
+				SizeBytes: f.SizeBytes,
+			}
+		}
+
 		messages[i] = dto.Message{
-			ID:        m.ID.String(),
-			Content:   m.Content,
-			FromMe:    m.UserID == userID,
-			UserID:    m.UserID.String(),
-			CreatedAt: m.CreatedAt.UTC(),
-			ReadAt:    readAt,
+			ID:           m.ID.String(),
+			Content:      m.Content,
+			FromMe:       m.UserID == userID,
+			UserID:       m.UserID.String(),
+			CreatedAt:    m.CreatedAt.UTC(),
+			ReadAt:       readAt,
+			MessageFiles: messageFiles,
 		}
 	}
 

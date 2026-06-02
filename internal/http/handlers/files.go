@@ -63,8 +63,11 @@ func (h *FileHandler) UploadFile(c *echo.Context) error {
 	fileUrl := fmt.Sprintf("/api/chats/%s/files/%s", chatID.String(), createdFile.ID.String())
 
 	resp := dto.NewFileResponse{
-		ID:  createdFile.ID.String(),
-		Url: fileUrl,
+		ID:        createdFile.ID.String(),
+		Name:      createdFile.FileName,
+		MimeType:  createdFile.MimeType,
+		SizeBytes: createdFile.SizeBytes,
+		Url:       fileUrl,
 	}
 
 	return c.JSON(http.StatusCreated, resp)

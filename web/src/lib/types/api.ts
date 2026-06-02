@@ -15,6 +15,14 @@ export interface ApiMessage {
     user_id: string;
     created_at: string;
     read_at: string | null;
+    files?: ApiMessageFile[];
+}
+
+export interface ApiMessageFile {
+    id: string;
+    name: string;
+    mime_type: string;
+    size_bytes: number;
 }
 
 export interface ChatsResponse {
@@ -27,6 +35,9 @@ export interface MessagesResponse {
 
 export interface UploadFileResponse {
     id: string;
+    name: string;
+    mime_type: string;
+    size_bytes: number;
     url: string;
 }
 

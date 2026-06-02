@@ -62,6 +62,13 @@ async function handleEvent(event: WsEvent) {
     switch (event.type) {
         case 'new_message':
             if (event.chat_id && event.message_id) {
+                const files = event.files?.map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    mimeType: f.mime_type,
+                    sizeBytes: f.size_bytes,
+                })) ?? [];
+
                 const message: Message = {
                     fromMe: event.from_me ?? false,
                     id: event.message_id,
@@ -72,6 +79,7 @@ async function handleEvent(event: WsEvent) {
                             ? new Date(event.date)
                             : new Date(),
                     readAt: null,
+                    files: files.length > 0 ? files : undefined,
                 };
                 appendMessage(event.chat_id, message);
                 

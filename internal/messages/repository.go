@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -94,6 +95,17 @@ func (r *MessagesRepository) ListChatMessages(
 			return nil, err
 		}
 
+		var messageFiles []MessageFile
+
+		if len(m.FilesJson) == 0 {
+			m.FilesJson = []byte("[]")
+		}
+
+		err = json.Unmarshal(m.FilesJson, &messageFiles)
+		if err != nil {
+			return nil, err
+		}
+
 		contentDecrypted, err := r.cipher.Decrypt(contentBytes)
 		if err != nil {
 			return nil, err
@@ -105,6 +117,7 @@ func (r *MessagesRepository) ListChatMessages(
 			Content:   string(contentDecrypted),
 			CreatedAt: m.CreatedAt.Time,
 			ReadAt:    readAt,
+			Files:     messageFiles,
 		}
 	}
 

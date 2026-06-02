@@ -93,7 +93,13 @@
                 text: message.content,
                 fromMe: message.from_me,
                 createdAt: new Date(message.created_at),
-                readAt: message.read_at ? new Date(message.read_at) : null
+                readAt: message.read_at ? new Date(message.read_at) : null,
+                files: message.files?.map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    mimeType: f.mime_type,
+                    sizeBytes: f.size_bytes,
+                })),
             }));
 
             chatPages[chatID] = page;
@@ -191,12 +197,12 @@
             return;
         }
 
-        let fileId: string | undefined;
+        let fileIds: string[] = [];
 
         if (file) {
             try {
                 const uploaded = await uploadChatFile(currentChat.id, file);
-                fileId = uploaded.id;
+                fileIds = [uploaded.id];
             } catch (err) {
                 const apiError = err as ApiError;
                 error = apiError.message || 'Failed to upload attachment';
@@ -208,7 +214,7 @@
             type: 'send_message',
             chat_id: currentChat.id,
             content: messageClean || '',
-            file_id: fileId
+            file_ids: fileIds
         });
 
         currentMessage = '';
@@ -388,7 +394,7 @@
                         {#if index === 0 || !isSameDay(messages[index - 1].createdAt, msg.createdAt)}
                             <div class="message-date-divider">{formatDateShort(msg.createdAt)}</div>
                         {/if}
-                        <MessageRow message={msg} />
+                        <MessageRow message={msg} chatId={currentChat.id} />
                     {/each}
                 {/if}
             </div>
