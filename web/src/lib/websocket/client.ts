@@ -7,6 +7,7 @@ const WS_URL = `ws://${import.meta.env.VITE_API_ADDR}/ws`;
 
 let socket: WebSocket | null = null;
 let isIntentionalClose = false;
+let pendingEvents: WsEvent[] = [];
 let onNewMessageCallback: ((chatId: string, message: Message) => void) | null = null;
 
 export function setOnNewMessageCallback(callback: (chatId: string, message: Message) => void) {
@@ -19,7 +20,14 @@ export function connect() {
     }
 
     socket = new WebSocket(WS_URL);
-    socket.onopen = () => { };
+    socket.onopen = () => {
+        while (pendingEvents.length > 0 && socket?.readyState === WebSocket.OPEN) {
+            const event = pendingEvents.shift();
+            if (event) {
+                socket.send(JSON.stringify(event));
+            }
+        }
+    };
 
     socket.onclose = (event) => {
         if (!isIntentionalClose) {
@@ -51,7 +59,10 @@ export function disconnect() {
 
 export function sendEvent(event: WsEvent) {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
-        console.error('ws not connected');
+        pendingEvents.push(event);
+        if (!socket || socket.readyState === WebSocket.CLOSED) {
+            connect();
+        }
         return;
     }
 
