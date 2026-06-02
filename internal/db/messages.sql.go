@@ -92,17 +92,17 @@ func (q *Queries) ListTopNMessages(ctx context.Context, arg ListTopNMessagesPara
 }
 
 const markMessagesAsRead = `-- name: MarkMessagesAsRead :exec
-UPDATE messages
+UPDATE messages m
 SET 
     read_at = now()
 WHERE 
-    id <= $1
-    AND
-    chat_id = $2
+    m.chat_id = $2
     AND 
-    user_id != $3
+    m.user_id != $3
     AND 
-    read_at IS NULL
+    m.read_at IS NULL
+	AND
+	m.created_at <= (SELECT created_at FROM messages WHERE messages.id = $1)
 `
 
 type MarkMessagesAsReadParams struct {

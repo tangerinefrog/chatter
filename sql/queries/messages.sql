@@ -24,14 +24,14 @@ ORDER BY m.created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: MarkMessagesAsRead :exec
-UPDATE messages
+UPDATE messages m
 SET 
     read_at = now()
 WHERE 
-    id <= $1
+    m.chat_id = $2
+    AND 
+    m.user_id != $3
+    AND 
+    m.read_at IS NULL
     AND
-    chat_id = $2
-    AND 
-    user_id != $3
-    AND 
-    read_at IS NULL;
+    m.created_at <= (SELECT created_at FROM messages WHERE messages.id = $1);
