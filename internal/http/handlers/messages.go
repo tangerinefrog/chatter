@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -76,6 +77,10 @@ func (h *messagesHandler) ListChatMessages(c *echo.Context) error {
 			MessageFiles: messageFiles,
 		}
 	}
+
+	sort.Slice(messages, func(i, j int) bool {
+		return messages[i].CreatedAt.Before(messages[j].CreatedAt)
+	})
 
 	resp := dto.ListChatMessagesResponse{
 		Messages: messages,

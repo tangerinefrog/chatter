@@ -60,7 +60,7 @@ SELECT
     ) files_json
 FROM messages m
 WHERE m.chat_id = $1
-ORDER BY m.created_at
+ORDER BY m.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
