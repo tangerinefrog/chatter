@@ -346,7 +346,7 @@
         });
     }
 
-    function handleVisibilityChange() {
+    function handleFocus() {
         if (document.visibilityState === 'visible') {
             markVisibleMessagesAsRead();
         }
@@ -357,11 +357,11 @@
         refreshChats();
         setOnNewMessageCallback(handleNewMessage);
 
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+        document.addEventListener('focus', handleFocus);
 
         return () => {
             disconnect();
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            document.removeEventListener('focus', handleFocus);
         };
     });
     
