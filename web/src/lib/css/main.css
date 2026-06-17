@@ -568,3 +568,59 @@
     align-items: center;
     justify-content: center;
 }
+
+.input-row {
+    display: flex;
+    align-items: center;
+    position: relative;
+    flex: 1;
+}
+
+.input-with-emoji {
+    position: relative;
+    flex: 1;
+}
+
+.input-with-emoji input {
+    width: 100%;
+    padding-right: 2.75rem;
+}
+
+.emoji-picker-wrapper {
+    position: absolute;
+    right: 0.625rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.chat-input .emoji-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.5;
+    transition: var(--transition);
+}
+
+
+.chat-input .emoji-button:hover:not(:disabled) {
+    opacity: 1;
+    background: none;
+}
+
+.chat-input .emoji-button img {
+    width: 18px;
+    height: 18px;
+}
+
+.emoji-picker-popover {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    z-index: 100;
+}
