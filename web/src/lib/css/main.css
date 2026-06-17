@@ -203,7 +203,7 @@
 }
 
 .message-row.me .bubble {
-    background: var(--primary);
+    background: var(--primary-dark);
     color: var(--text-white);
     border-bottom-right-radius: 6px;
     border-top-right-radius: var(--radius);
