@@ -7,13 +7,14 @@
     export let isLoading = false;
     export let onSelectChat: (chat: Chat) => void;
     export let onAddNewChat: () => void;
+    export let onLogout: () => void;
 </script>
 
 <aside class="sidebar">
     <div class="sidebar-header">
         Chats
 
-        <button class="button" on:click={onAddNewChat}>+ Add new</button>
+        <button class="add-chat-btn" on:click={onAddNewChat} title="New chat">+</button>
     </div>
 
     <div class="contacts">
@@ -30,5 +31,9 @@
                 />
             {/each}
         {/if}
+    </div>
+
+    <div class="sidebar-footer">
+        <button class="logout-btn" on:click={onLogout}>log out</button>
     </div>
 </aside>

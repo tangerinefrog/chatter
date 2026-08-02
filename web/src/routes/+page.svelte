@@ -2,6 +2,7 @@
     import type { Chat } from '$lib/models/chat';
     import type { Message } from '$lib/models/message';
     import { getChats, getMessages, createChat, uploadChatFile } from '$lib/api/client';
+    import { goto } from '$app/navigation';
     import { connect, disconnect, sendEvent, setOnNewMessageCallback } from '$lib/websocket/client';
     import { onMount, tick } from 'svelte';
     import { setMessages, messagesStore } from '$lib/stores/messages';
@@ -12,6 +13,7 @@
     import ChatInput from '$lib/components/ChatInput.svelte';
     import MessageRow from '$lib/components/MessageRow.svelte';
     import NewChatModal from '$lib/components/NewChatModal.svelte';
+    import ConfirmModal from '$lib/components/ConfirmModal.svelte';
     
     import '$lib/css/main.css';
 
@@ -22,6 +24,7 @@
     let currentChat: Chat | null = null;
     let currentMessage = '';
     let isNewChatModalOpen = false;
+    let isLogoutModalOpen = false;
     let username = '';
     let isLoadingChats = false;
     let isLoadingMessages = false;
@@ -346,6 +349,19 @@
         });
     }
 
+    function openLogoutModal() {
+        isLogoutModalOpen = true;
+    }
+
+    function closeLogoutModal() {
+        isLogoutModalOpen = false;
+    }
+
+    async function logout() {
+        await fetch('/auth/logout', { method: 'POST' });
+        await goto('/auth');
+    }
+
     function handleFocus() {
         if (document.visibilityState === 'visible') {
             markVisibleMessagesAsRead();
@@ -376,6 +392,7 @@
         isLoading={isLoadingChats}
         onSelectChat={selectChat}
         onAddNewChat={openModal}
+        onLogout={openLogoutModal}
     />
 
     <main class="chat">
@@ -410,6 +427,14 @@
             <div class="empty">Select a chat or start a new one</div>
         {/if}
     </main>
+
+    {#if isLogoutModalOpen}
+        <ConfirmModal
+            message="Are you sure you want to log out?"
+            onConfirm={logout}
+            onClose={closeLogoutModal}
+        />
+    {/if}
 
     {#if isNewChatModalOpen}
         <NewChatModal
